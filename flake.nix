@@ -205,12 +205,12 @@
           # A CLI to build eif images, a thin wrapper around AWS' library
           # https://github.com/aws/aws-nitro-enclaves-image-format
           # eif-cli [OPTIONS] --kernel <FILE> --kernel_config <FILE> --cmdline <String> --output <FILE> --ramdisk <FILE>
-          packages.eif-cli = pkgs.rustPlatform.buildRustPackage {
+          packages.eif-cli = pkgs.rustPlatform.buildRustPackage rec {
             name = "eif-cli";
             nativeBuildInputs = [ pkgs.pkg-config ];
             buildInputs = [ pkgs.openssl ];
-            src = ./cli;
-            cargoLock.lockFile = ./cli/Cargo.lock;
+            src = ./eif-cli;
+            cargoLock.lockFile = src + "/Cargo.lock";
           };
 
 
