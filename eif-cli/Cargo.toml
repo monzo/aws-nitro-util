@@ -1,0 +1,17 @@
+[package]
+name = "eif-cli"
+version = "0.1.0"
+license = "Apache-2.0"
+description = "This CLI provides an API with the definition of the enclave image format (EIF) file used in AWS Nitro Enclaves."
+repository = "https://github.com/aws/aws-nitro-enclaves-image-format"
+keywords = ["Nitro", "Enclaves", "AWS"]
+
+
+# see https://github.com/aws/aws-nitro-enclaves-image-format/blob/main/Cargo.toml
+[dependencies]
+aws-nitro-enclaves-image-format = "0.2"
+
+sha2 = "0.9.5"
+serde = { version = ">=1.0", features = ["derive"] }
+serde_json = "1.0"
+clap = "3.2"
