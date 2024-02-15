@@ -122,6 +122,7 @@
               , kernel             # path (derivation) to compiled kernel binary
               , kernelConfig       # path (derivation) to kernel config file
               , cmdline ? "reboot=k panic=30 pci=off nomodules console=ttyS0 random.trust_cpu=on root=/dev/ram0" # string
+              , arch ? sysPrefix   # string - architecture to build EIF for. Defaults to current system's
               }: pkgs.stdenv.mkDerivation {
                 pname = "${name}.eif";
                 inherit version;
@@ -139,7 +140,7 @@
                     echo "Kernel config:     ${kernelConfig}"
                     echo "cmdline:           ${cmdline}"
                     echo "ramdisks:          ${pkgs.lib.concatStrings ramdisks}"
-                    $eif --sha384 --arch ${sysPrefix} --kernel ${kernel} --kernel_config ${kernelConfig} --cmdline "${cmdline}" ${ramdisksArgs} --name ${name} --version ${version} --output image.eif >> log.txt
+                    $eif --sha384 --arch ${arch} --kernel ${kernel} --kernel_config ${kernelConfig} --cmdline "${cmdline}" ${ramdisksArgs} --name ${name} --version ${version} --output image.eif >> log.txt
                   '';
 
                 installPhase = ''
@@ -186,7 +187,6 @@
                   "$sourceURL" "oci:image:latest" \
                   | cat  # pipe through cat to force-disable progress bar
 
-                ls -la image
                 mkdir -p $out
                 umoci raw unpack  --rootless --image image $out
                 echo "Unpacked filesystem:"
@@ -227,6 +227,11 @@
             nativeBuildInputs = [ pkgs.glibc.static ];
             buildPhase = "make";
             installPhase = "mkdir -p $out && cp -r ./init $out/";
+          };
+
+          checks = {
+            # make sure we can build init.c and the eif-cli
+            inherit (packages) eif-init eif-cli;
           };
         }
       ));
