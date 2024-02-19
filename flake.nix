@@ -14,7 +14,7 @@
     flake-utils.url = "github:numtide/flake-utils";
   };
 
-  outputs = { nixpkgs, flake-utils, ... }:
+  outputs = { self, nixpkgs, flake-utils, ... }:
     nixpkgs.lib.recursiveUpdate
       (flake-utils.lib.eachDefaultSystem
         (system:
@@ -199,9 +199,8 @@
               cargoLock.lockFile = src + "/Cargo.lock";
             };
 
-
             checks = {
-              # make sure we can build init.c and the eif-cli
+              # make sure we can build the eif-cli
               inherit (packages) eif-cli;
             };
           }
@@ -211,25 +210,21 @@
       (flake-utils.lib.eachSystem [ "x86_64-linux" "aarch64-linux" ] (system:
         let
           pkgs = nixpkgs.legacyPackages."${system}";
+          # returns 'aarch64' from 'aarch64-linux'
+          sysPrefix = pkgs.lib.strings.removeSuffix "-linux" system;
+          kName = if sysPrefix == "aarch64" then "Image" else "bzImage";
         in
         rec {
 
           # paths to each of the blobs, for use if you are not compiling these from source
-          lib.blobs =
-            let
-              # returns 'aarch64' from 'aarch64-linux'
-              sysPrefix = pkgs.lib.strings.removeSuffix "-linux" system;
-              kName = if sysPrefix == "aarch64" then "Image" else "bzImage";
-            in
-            rec {
-              blobPath = packages.aws-nitro-cli-src + "/blobs/${sysPrefix}";
-              kernel = blobPath + "/${kName}";
-              kernelConfig = blobPath + "/${kName}.config";
-              cmdLine = blobPath + "/cmdline";
-              nsmKo = blobPath + "/nsm.ko";
-              init = blobPath + "/init";
-            };
-
+          lib.blobs = rec {
+            blobPath = self.packages.${system}.aws-nitro-cli-src + "/blobs/${sysPrefix}";
+            kernel = blobPath + "/${kName}";
+            kernelConfig = blobPath + "/${kName}.config";
+            cmdLine = blobPath + "/cmdline";
+            nsmKo = blobPath + "/nsm.ko";
+            init = blobPath + "/init";
+          };
 
 
           # init.c, compiled and statically linked from https://github.com/aws/aws-nitro-enclaves-sdk-bootstrap
@@ -248,7 +243,7 @@
           };
 
           checks = {
-            # make sure we can build init.c and the eif-cli
+            # make sure we can build init.c
             inherit (packages) eif-init;
           };
         }
