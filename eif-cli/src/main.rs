@@ -189,6 +189,10 @@ fn main() {
         None => json!(null),
     };
 
+    let mut build_info = generate_build_info!(kernel_config_path).expect("Can not generate build info");
+
+    build_info.build_time = "1970-01-01T00:00:00.00+00:00".to_owned();
+
     let eif_info = EifIdentityInfo {
         img_name: img_name.unwrap_or_else(|| {
             // Set default value to kernel file name
@@ -200,7 +204,7 @@ fn main() {
                 .to_string()
         }),
         img_version: img_version.unwrap_or_else(|| "1.0".to_string()),
-        build_info: generate_build_info!(kernel_config_path).expect("Can not generate build info"),
+        build_info: build_info,
         docker_info: json!(null),
         custom_info: metadata,
     };
