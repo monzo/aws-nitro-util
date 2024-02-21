@@ -1,0 +1,21 @@
+name: Test Nix Flake build
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+
+  flake-check:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: cachix/install-nix-action@v22
+      with:
+        nix_path: nixpkgs=channel:nixos-23.11
+        github_access_token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - run: nix flake check
