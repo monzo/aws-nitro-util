@@ -1,9 +1,9 @@
-name: Test Nix Flake build
+name: On push
 
 on:
   workflow_dispatch:
   push:
-    branches: [ master ]
+    branches: [ "*" ]
   pull_request:
     branches: [ master ]
 
@@ -19,5 +19,5 @@ jobs:
         github_access_token: ${{ secrets.GITHUB_TOKEN }}
 
     - uses: DeterminateSystems/magic-nix-cache-action@eeabdb06718ac63a7021c6132129679a8e22d0c7
-    
+
     - run: nix flake check
