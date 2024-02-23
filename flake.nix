@@ -202,6 +202,35 @@
             checks = {
               # make sure we can build the eif-cli
               inherit (packages) eif-cli;
+
+              # build a simple (non-bootable) EIF image for ARM64 as part of checks
+              test-make-eif = lib.mkEif {
+                name = "test";
+                ramdisks = [
+                  (lib.mkSysRamdisk { init = self.lib.aarch64-linux.blobs.init; nsmKo = self.lib.aarch64-linux.blobs.nsmKo; })
+                  (lib.mkUserRamdisk { entrypoint = "none"; env = ""; rootfs = pkgs.writeTextDir "etc/file" "hello world!"; })
+                ];
+                kernel = self.lib.aarch64-linux.blobs.kernel;
+                kernelConfig = self.lib.aarch64-linux.blobs.kernelConfig;
+              };
+
+              # check the PCR for this simple EIF is reproduced
+              test-eif-PCRs-match = pkgs.stdenvNoCC.mkDerivation {
+                buildInputs = [ pkgs.jq ];
+                name = "test-eif-PCRs-match";
+                src = checks.test-make-eif;
+                dontBuild = true;
+                doCheck = true;
+                checkPhase = ''
+                  PCR0=$(jq -r < ./pcr.json ' .PCR0 ')
+                  if echo "$PCR0" | grep -qv 'a15c9d65991e44f63827e506d519b9107cc81844a8745a315a1d543b8788ea58254c7b17bc0003d2fa7322142a47e007'
+                  then
+                    echo "PCR0 did not match, got instead:" $PCR0
+                    exit -1
+                  fi
+                '';
+                installPhase = "mkdir $out";
+              };
             };
           }
         ))
