@@ -205,13 +205,14 @@
 
               # build a simple (non-bootable) EIF image for ARM64 as part of checks
               test-make-eif = lib.mkEif {
+                arch = "x86_64";
                 name = "test";
                 ramdisks = [
                   (lib.mkSysRamdisk { init = self.lib.x86_64-linux.blobs.init; nsmKo = self.lib.x86_64-linux.blobs.nsmKo; })
                   (lib.mkUserRamdisk { entrypoint = "none"; env = ""; rootfs = pkgs.writeTextDir "etc/file" "hello world!"; })
                 ];
-                kernel = self.lib.aarch64-linux.blobs.kernel;
-                kernelConfig = self.lib.aarch64-linux.blobs.kernelConfig;
+                kernel = self.lib.x86_64-linux.blobs.kernel;
+                kernelConfig = self.lib.x86_64-linux.blobs.kernelConfig;
               };
 
               # check the PCR for this simple EIF is reproduced
@@ -223,7 +224,7 @@
                 doCheck = true;
                 checkPhase = ''
                   PCR0=$(jq -r < ./pcr.json ' .PCR0 ')
-                  if echo "$PCR0" | grep -qv '7b93be4b98ac97f444f4bd80d5a3c86ad34d0382ba7fb9b3d0001d9e55c360f067bab523113ef565f277ecdc2dde20c2'
+                  if echo "$PCR0" | grep -qv 'f585cae40c5d5d640a60d3c7f8c5dcf7276364c49f7d7fa8d08800b35c45825099688c2acc02bb2373ebfbd8a5ba10b4'
                   then
                     echo "PCR0 did not match, got instead:" $PCR0
                     exit -1
