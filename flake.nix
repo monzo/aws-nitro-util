@@ -207,7 +207,7 @@
               test-make-eif = lib.mkEif {
                 name = "test";
                 ramdisks = [
-                  (lib.mkSysRamdisk { init = self.lib.aarch64-linux.blobs.init; nsmKo = self.lib.aarch64-linux.blobs.nsmKo; })
+                  (lib.mkSysRamdisk { init = self.lib.x86_64-linux.blobs.init; nsmKo = self.lib.x86_64-linux.blobs.nsmKo; })
                   (lib.mkUserRamdisk { entrypoint = "none"; env = ""; rootfs = pkgs.writeTextDir "etc/file" "hello world!"; })
                 ];
                 kernel = self.lib.aarch64-linux.blobs.kernel;
@@ -223,7 +223,7 @@
                 doCheck = true;
                 checkPhase = ''
                   PCR0=$(jq -r < ./pcr.json ' .PCR0 ')
-                  if echo "$PCR0" | grep -qv 'a15c9d65991e44f63827e506d519b9107cc81844a8745a315a1d543b8788ea58254c7b17bc0003d2fa7322142a47e007'
+                  if echo "$PCR0" | grep -qv '7b93be4b98ac97f444f4bd80d5a3c86ad34d0382ba7fb9b3d0001d9e55c360f067bab523113ef565f277ecdc2dde20c2'
                   then
                     echo "PCR0 did not match, got instead:" $PCR0
                     exit -1
