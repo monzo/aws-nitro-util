@@ -12,7 +12,7 @@ You can think of it as an alternative to `nitro-cli build-enclave` for building 
 The tradeoffs are:
 | Feature | `nitro-cli build-enclave` | monzo/aws-nitro-util |
 |---------|-----------|----------------------|
-| EIF userspace input | Docker container | any filesystem, including nix packages
+| EIF userspace input | Docker container | plain files, including nix packages and unpacked OCI images
 | EIF bootstrap input | pre-compiled kernel binary provided by AWS | Bring Your Own Kernel (but you can still choose AWS' if you choose not to compile your own kernel)
 | dependencies | Docker, linuxkit fork, [aws/aws-nitro-enclaves-image-format](https://github.com/aws/aws-nitro-enclaves-image-format/) | Nix, [aws/aws-nitro-enclaves-image-format](https://github.com/aws/aws-nitro-enclaves-image-format/)
 | Source-reproducible | no, uses pre-compiled blobs provided by AWS | yes, can be built entirely from source
@@ -40,21 +40,19 @@ Assuming a local directory with pre-compiled binaries:
 
 ## Design
 
-monzo/aws-nitro-util is made up of a small CLI that wraps  [aws/aws-nitro-enclaves-image-format](https://github.com/aws/aws-nitro-enclaves-image-format/) (which allows building an EIF from a specific filesystem) and of Nix utilities to reproducibly build the CLI and its inputs.
+monzo/aws-nitro-util is made up of a small CLI that wraps  [aws/aws-nitro-enclaves-image-format](https://github.com/aws/aws-nitro-enclaves-image-format/) (which allows building an EIF from a specific file structure) and of Nix utilities to reproducibly build the CLI and its inputs.
+
+A typical EIF build would look like the following:
 
 ```mermaid
 %%{init: {"flowchart": {"htmlLabels": false}} }%%
 
 graph TD
-	style main stroke:#018E01
-	style main stroke-width:4
+	style yourRepo stroke:#C802E5
+	style yourRepo stroke-width:4
 
 	style initBin stroke:#018E01
 	style initBin stroke-width:4
-
-	style eifCli stroke:#018E01
-	style eifCli stroke-width:4
-
 
 	style nsm stroke:#9B6201
 	style nsm stroke-width:4
@@ -68,16 +66,17 @@ graph TD
 		eifFormatRepo("📦 github repo \n aws/ \n aws-nitro-enclaves-\nimage-format")
 		nitroCliRepo("📦 github repo \n aws/ \n aws-nitro-enclaves-\n cli")
 		bootstrapRepo("📦 github repo \n aws/ \n aws-nitro-enclaves-\nsdk-bootstrap")
-		yourRepo("your source code")
-
-
+		yourRepo("your source code \n or OCI image")
 	end
-	initBin("init \n compiled init.c")
-	eifCli("📦 eif-cli \n CLI written \n from source")
-	kernel("Kernel \n binary")
-	nsm("nsm.ko \n compiled Nitro \n kernel module")
-	sysInit("system-initramfs \n (app-agnositc) \n PCR1")
-	userInit("user-initramfs \n (app-specific)\n PCR2")
+	initBin("init \n compiled init.c \n (or bring your own)")
+	eifCli("📦 eif-cli \n in this repo")
+	nsm("nsm.ko \n compiled Nitro \n kernel module \n (or bring your own)")
+
+    subgraph PCR1
+        kernel("Kernel binary \n (or bring your own)")
+        sysInit("system-initramfs \n (app-agnositc) \n PCR1")
+	end
+    userInit("user-initramfs \n (app-specific)\n PCR2")
 	
 	rootfs("rootfs \n folder containing \n filesystem \n (eg, compiled main.go)")
 
@@ -109,3 +108,7 @@ graph TD
 	doEif -->eif("image.eif \n enclave image")
 	doEif -->pcr("pcr.json \n PCR signatures")
 ```
+
+- Pink outline: your build input (what will run on the enclave after it boots)
+- Green outline: by AWS, compiled from source
+- Brown outline: by AWS, downloaded trusted binary (that you can choose to replace with your own)
