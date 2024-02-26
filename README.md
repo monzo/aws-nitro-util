@@ -27,20 +27,34 @@ The tradeoffs between using this repo and AWS' `nitro-cli` are:
 
 ## Examples
 
-
-### Building an image from a package
-
-Assuming a self-contained Nix package (like a Go binary):
+Flake quick start, to build an enclave with nixpkgs' `hello` :
 ```nix
+{
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    nitro-util.url = "github:/monzo/aws-nitro-util";
+    nitro-util.inputs.nixpkgs.follows = "nixpkgs";
+  };
+  outputs = { self, nixpkgs, flake-utils, nitro-util, ... }:
+    let system = x86_64-linux; 
+        nitro = nitro-util.lib.${system};
+    in {
+        packages.${system}.eif-hello-world = nitro.mkEif {
+            # use AWS' nitro-cli kernel and kernelConfig
+            inherit (nitro.blobs) kernel kernelConfig;
+            name = "eif-hello-world";
+            ramdisks = nitro.mkRamdisksFrom {
+                # use aws' nitro kernel module
+                inherit (nitro.blobs) nsmKo;
+                rootfs = pkgs.legacyPackages.${system}.hello;
+                entrypoint = "/bin/hello";
+            };
+        };
+    };
+}
 ```
 
-Assuming an existing container image in a remote registry you want to make into en EIF:
-```nix
-```
-
-Assuming a local directory with pre-compiled binaries:
-```nix
-```
+See more examples in [`examples/`](./examples/).
 
 ## Design
 
