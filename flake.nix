@@ -224,11 +224,11 @@
                 arch = "x86_64";
                 name = "test";
                 ramdisks = [
-                  (lib.mkSysRamdisk { init = self.lib.x86_64-linux.blobs.init; nsmKo = self.lib.x86_64-linux.blobs.nsmKo; })
+                  (lib.mkSysRamdisk { init = self.lib.x86_64-linux.blobs.x86_64.init; nsmKo = self.lib.x86_64-linux.blobs.x86_64.nsmKo; })
                   (lib.mkUserRamdisk { entrypoint = "none"; env = ""; rootfs = pkgs.writeTextDir "etc/file" "hello world!"; })
                 ];
-                kernel = self.lib.x86_64-linux.blobs.kernel;
-                kernelConfig = self.lib.x86_64-linux.blobs.kernelConfig;
+                kernel = self.lib.x86_64-linux.blobs.x86_64.kernel;
+                kernelConfig = self.lib.x86_64-linux.blobs.x86_64.kernelConfig;
               };
 
               # check the PCR for this simple EIF is reproduced
