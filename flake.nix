@@ -200,8 +200,8 @@
             packages.aws-nitro-cli-src = pkgs.fetchFromGitHub {
               owner = "aws";
               repo = "aws-nitro-enclaves-cli";
-              rev = "v1.2.2";
-              sha256 = "sha256-00ZSsoezkoVPGrBy3C8UA5m/+Ip+uurqLrhM2dkW/eE=";
+              rev = "v1.2.3";
+              sha256 = "sha256-GeguCHNIOhPYc9vUzHrQQdc9lK/fru0yYthL2UumA/Q=";
             };
 
             # A CLI to build eif images, a thin wrapper around AWS' library
