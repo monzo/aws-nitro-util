@@ -10,7 +10,7 @@
   description = "Builds binaries for key exchange scripts deterministically, cross-platform";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-23.05";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
   };
 
@@ -26,6 +26,22 @@
           in
           rec {
             lib = {
+              # paths to each of the blobs, for use if you are not compiling these from source
+              blobs =
+                let
+                  blobPath = self.packages.${system}.aws-nitro-cli-src + "/blobs/${sysPrefix}";
+                  blobsFor = kName: {
+                    kernel = blobPath + "/${kName}";
+                    kernelConfig = blobPath + "/${kName}.config";
+                    cmdLine = blobPath + "/cmdline";
+                    nsmKo = blobPath + "/nsm.ko";
+                    init = blobPath + "/init";
+                  };
+                in
+                {
+                  aarch64 = blobsFor "Image";
+                  x86_64 = blobsFor "bzImage";
+                };
 
               /* Assembles an initramfs archive from a compiled init binary and a compiled Nitro kernel module.
                *
@@ -240,23 +256,8 @@
       (flake-utils.lib.eachSystem [ "x86_64-linux" "aarch64-linux" ] (system:
         let
           pkgs = nixpkgs.legacyPackages."${system}";
-          # returns 'aarch64' from 'aarch64-linux'
-          sysPrefix = pkgs.lib.strings.removeSuffix "-linux" system;
-          kName = if sysPrefix == "aarch64" then "Image" else "bzImage";
         in
         rec {
-
-          # paths to each of the blobs, for use if you are not compiling these from source
-          lib.blobs = rec {
-            blobPath = self.packages.${system}.aws-nitro-cli-src + "/blobs/${sysPrefix}";
-            kernel = blobPath + "/${kName}";
-            kernelConfig = blobPath + "/${kName}.config";
-            cmdLine = blobPath + "/cmdline";
-            nsmKo = blobPath + "/nsm.ko";
-            init = blobPath + "/init";
-          };
-
-
           # init.c, compiled and statically linked from https://github.com/aws/aws-nitro-enclaves-sdk-bootstrap
           packages.eif-init = pkgs.stdenv.mkDerivation {
             name = "eif-init";
