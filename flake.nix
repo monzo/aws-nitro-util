@@ -10,7 +10,7 @@
   description = "Builds binaries for key exchange scripts deterministically, cross-platform";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-23.05";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
   };
 
@@ -26,8 +26,25 @@
           in
           rec {
             lib = {
+              # paths to each of the blobs, for use if you are not compiling these from source
+              blobs =
+                let
+                  blobsFor = kName: prefix: rec {
+                    blobPath = self.packages.${system}.aws-nitro-cli-src + "/blobs/${prefix}";
+                    kernel = blobPath + "/${kName}";
+                    kernelConfig = blobPath + "/${kName}.config";
+                    cmdLine = blobPath + "/cmdline";
+                    nsmKo = blobPath + "/nsm.ko";
+                    init = blobPath + "/init";
+                  };
+                in
+                {
+                  aarch64 = blobsFor "Image" "aarch64";
+                  x86_64 = blobsFor "bzImage" "x86_64";
+                };
 
-              /* Assembles an initramfs archive from a compiled init binary and a compiled Nitro kernel module.
+              /**
+               * Assembles an initramfs archive from a compiled init binary and a compiled Nitro kernel module.
                *
                * The expected layout depends on the source of init.c, but see
                * https://github.com/aws/aws-nitro-enclaves-cli/blob/main/enclave_build/src/yaml_generator.rs
@@ -51,14 +68,14 @@
                   '';
                 };
 
-              /* Assembles an initramfs archive from a root filesystem and config for the entrypoint.
-
-            The expected layout depends on the source of init.c, but see
-            https://github.com/aws/aws-nitro-enclaves-cli/blob/main/enclave_build/src/yaml_generator.rs
-            for the expected file layout of AWS' init.c
-
-            Returns a derivation to a cpio.gz archive
-              */
+              /**
+               * Assembles an initramfs archive from a root filesystem and config for the entrypoint.
+               * The expected layout depends on the source of init.c, but see
+               * https://github.com/aws/aws-nitro-enclaves-cli/blob/main/enclave_build/src/yaml_generator.rs
+               * for the expected file layout of AWS' init.c
+               * 
+               * Returns a derivation to a cpio.gz archive
+               */
               mkUserRamdisk =
                 { name ? "user-initramfs"
                 , entrypoint # string - command to execute after encave boot - this is the path to your entrypoint binary inside rootfs)
@@ -181,12 +198,21 @@
             };
 
             # The repo we get compiled blobs from
-            packages.aws-nitro-cli-src = pkgs.fetchFromGitHub {
-              owner = "aws";
-              repo = "aws-nitro-enclaves-cli";
-              rev = "v1.2.2";
-              sha256 = "sha256-00ZSsoezkoVPGrBy3C8UA5m/+Ip+uurqLrhM2dkW/eE=";
-            };
+            packages.aws-nitro-cli-src =
+              let
+                hashes = rec {
+                  x86_64-linux = "sha256-+vQ9XK3la7K35p4VI3Mct5ij2o21zEYeqndI7RjTyiQ=";
+                  aarch64-darwin = "sha256-GeguCHNIOhPYc9vUzHrQQdc9lK/fru0yYthL2UumA/Q=";
+                  aarch64-linux = x86_64-linux;
+                  x86_64-darwin = aarch64-darwin;
+                };
+              in
+              pkgs.fetchFromGitHub {
+                owner = "aws";
+                repo = "aws-nitro-enclaves-cli";
+                rev = "v1.2.3";
+                sha256 = hashes.${system};
+              };
 
             # A CLI to build eif images, a thin wrapper around AWS' library
             # https://github.com/aws/aws-nitro-enclaves-image-format
@@ -208,11 +234,11 @@
                 arch = "x86_64";
                 name = "test";
                 ramdisks = [
-                  (lib.mkSysRamdisk { init = self.lib.x86_64-linux.blobs.init; nsmKo = self.lib.x86_64-linux.blobs.nsmKo; })
+                  (lib.mkSysRamdisk { init = lib.blobs.x86_64.init; nsmKo = lib.blobs.x86_64.nsmKo; })
                   (lib.mkUserRamdisk { entrypoint = "none"; env = ""; rootfs = pkgs.writeTextDir "etc/file" "hello world!"; })
                 ];
-                kernel = self.lib.x86_64-linux.blobs.kernel;
-                kernelConfig = self.lib.x86_64-linux.blobs.kernelConfig;
+                kernel = lib.blobs.x86_64.kernel;
+                kernelConfig = lib.blobs.x86_64.kernelConfig;
               };
 
               # check the PCR for this simple EIF is reproduced
@@ -240,23 +266,8 @@
       (flake-utils.lib.eachSystem [ "x86_64-linux" "aarch64-linux" ] (system:
         let
           pkgs = nixpkgs.legacyPackages."${system}";
-          # returns 'aarch64' from 'aarch64-linux'
-          sysPrefix = pkgs.lib.strings.removeSuffix "-linux" system;
-          kName = if sysPrefix == "aarch64" then "Image" else "bzImage";
         in
         rec {
-
-          # paths to each of the blobs, for use if you are not compiling these from source
-          lib.blobs = rec {
-            blobPath = self.packages.${system}.aws-nitro-cli-src + "/blobs/${sysPrefix}";
-            kernel = blobPath + "/${kName}";
-            kernelConfig = blobPath + "/${kName}.config";
-            cmdLine = blobPath + "/cmdline";
-            nsmKo = blobPath + "/nsm.ko";
-            init = blobPath + "/init";
-          };
-
-
           # init.c, compiled and statically linked from https://github.com/aws/aws-nitro-enclaves-sdk-bootstrap
           packages.eif-init = pkgs.stdenv.mkDerivation {
             name = "eif-init";
