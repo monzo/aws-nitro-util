@@ -43,7 +43,8 @@
                   x86_64 = blobsFor "bzImage" "x86_64";
                 };
 
-              /* Assembles an initramfs archive from a compiled init binary and a compiled Nitro kernel module.
+              /**
+               * Assembles an initramfs archive from a compiled init binary and a compiled Nitro kernel module.
                *
                * The expected layout depends on the source of init.c, but see
                * https://github.com/aws/aws-nitro-enclaves-cli/blob/main/enclave_build/src/yaml_generator.rs
@@ -67,14 +68,14 @@
                   '';
                 };
 
-              /* Assembles an initramfs archive from a root filesystem and config for the entrypoint.
-
-            The expected layout depends on the source of init.c, but see
-            https://github.com/aws/aws-nitro-enclaves-cli/blob/main/enclave_build/src/yaml_generator.rs
-            for the expected file layout of AWS' init.c
-
-            Returns a derivation to a cpio.gz archive
-              */
+              /**
+               * Assembles an initramfs archive from a root filesystem and config for the entrypoint.
+               * The expected layout depends on the source of init.c, but see
+               * https://github.com/aws/aws-nitro-enclaves-cli/blob/main/enclave_build/src/yaml_generator.rs
+               * for the expected file layout of AWS' init.c
+               * 
+               * Returns a derivation to a cpio.gz archive
+               */
               mkUserRamdisk =
                 { name ? "user-initramfs"
                 , entrypoint # string - command to execute after encave boot - this is the path to your entrypoint binary inside rootfs)
