@@ -199,9 +199,11 @@
             # The repo we get compiled blobs from
             packages.aws-nitro-cli-src =
               let
-                hashes = {
+                hashes = rec {
                   x86_64-linux = "sha256-+vQ9XK3la7K35p4VI3Mct5ij2o21zEYeqndI7RjTyiQ=";
                   aarch64-darwin = "sha256-GeguCHNIOhPYc9vUzHrQQdc9lK/fru0yYthL2UumA/Q=";
+                  aarch64-linux = x86_64-linux;
+                  x86_64-darwin = aarch64-darwin;
                 };
               in
               pkgs.fetchFromGitHub {
