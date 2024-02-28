@@ -21,7 +21,7 @@
           let
             pkgs = nixpkgs.legacyPackages."${system}";
             # returns 'aarch64' from 'aarch64-linux'
-            sysPrefix = with pkgs.lib.strings;
+            prefixFor = system: with pkgs.lib.strings;
               if (hasSuffix "-linux" system) then (removeSuffix "-linux" system) else (removeSuffix "-darwin" system);
           in
           rec {
@@ -29,8 +29,8 @@
               # paths to each of the blobs, for use if you are not compiling these from source
               blobs =
                 let
-                  blobPath = self.packages.${system}.aws-nitro-cli-src + "/blobs/${sysPrefix}";
-                  blobsFor = kName: {
+                  blobsFor = kName: prefix: rec {
+                    blobPath = self.packages.${system}.aws-nitro-cli-src + "/blobs/${prefix}";
                     kernel = blobPath + "/${kName}";
                     kernelConfig = blobPath + "/${kName}.config";
                     cmdLine = blobPath + "/cmdline";
@@ -39,8 +39,8 @@
                   };
                 in
                 {
-                  aarch64 = blobsFor "Image";
-                  x86_64 = blobsFor "bzImage";
+                  aarch64 = blobsFor "Image" "aarch64";
+                  x86_64 = blobsFor "bzImage" "x86_64";
                 };
 
               /* Assembles an initramfs archive from a compiled init binary and a compiled Nitro kernel module.
@@ -124,7 +124,7 @@
                 , kernel             # path (derivation) to compiled kernel binary
                 , kernelConfig       # path (derivation) to kernel config file
                 , cmdline ? "reboot=k panic=30 pci=off nomodules console=ttyS0 random.trust_cpu=on root=/dev/ram0" # string
-                , arch ? sysPrefix   # string - <"aarch64" | "x86_64"> architecture to build EIF for. Defaults to current system's.
+                , arch ? (prefixFor system)   # string - <"aarch64" | "x86_64"> architecture to build EIF for. Defaults to current system's.
                 }: pkgs.stdenv.mkDerivation {
                   pname = "${name}.eif";
                   inherit version;
@@ -197,12 +197,19 @@
             };
 
             # The repo we get compiled blobs from
-            packages.aws-nitro-cli-src = pkgs.fetchFromGitHub {
-              owner = "aws";
-              repo = "aws-nitro-enclaves-cli";
-              rev = "v1.2.3";
-              sha256 = "sha256-GeguCHNIOhPYc9vUzHrQQdc9lK/fru0yYthL2UumA/Q=";
-            };
+            packages.aws-nitro-cli-src =
+              let
+                hashes = {
+                  x86_64-linux = "sha256-+vQ9XK3la7K35p4VI3Mct5ij2o21zEYeqndI7RjTyiQ=";
+                  aarch64-darwin = "sha256-GeguCHNIOhPYc9vUzHrQQdc9lK/fru0yYthL2UumA/Q=";
+                };
+              in
+              pkgs.fetchFromGitHub {
+                owner = "aws";
+                repo = "aws-nitro-enclaves-cli";
+                rev = "v1.2.3";
+                sha256 = hashes.${system};
+              };
 
             # A CLI to build eif images, a thin wrapper around AWS' library
             # https://github.com/aws/aws-nitro-enclaves-image-format
@@ -224,11 +231,11 @@
                 arch = "x86_64";
                 name = "test";
                 ramdisks = [
-                  (lib.mkSysRamdisk { init = self.lib.x86_64-linux.blobs.x86_64.init; nsmKo = self.lib.x86_64-linux.blobs.x86_64.nsmKo; })
+                  (lib.mkSysRamdisk { init = lib.blobs.x86_64.init; nsmKo = lib.blobs.x86_64.nsmKo; })
                   (lib.mkUserRamdisk { entrypoint = "none"; env = ""; rootfs = pkgs.writeTextDir "etc/file" "hello world!"; })
                 ];
-                kernel = self.lib.x86_64-linux.blobs.x86_64.kernel;
-                kernelConfig = self.lib.x86_64-linux.blobs.x86_64.kernelConfig;
+                kernel = lib.blobs.x86_64.kernel;
+                kernelConfig = lib.blobs.x86_64.kernelConfig;
               };
 
               # check the PCR for this simple EIF is reproduced
