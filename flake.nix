@@ -21,7 +21,7 @@
           let
             pkgs = nixpkgs.legacyPackages."${system}";
             # returns 'aarch64' from 'aarch64-linux'
-            prefixFor = system: with pkgs.lib.strings;
+            sysPrefix = with pkgs.lib.strings;
               if (hasSuffix "-linux" system) then (removeSuffix "-linux" system) else (removeSuffix "-darwin" system);
           in
           rec {
@@ -124,7 +124,7 @@
                 , kernel             # path (derivation) to compiled kernel binary
                 , kernelConfig       # path (derivation) to kernel config file
                 , cmdline ? "reboot=k panic=30 pci=off nomodules console=ttyS0 random.trust_cpu=on root=/dev/ram0" # string
-                , arch ? (prefixFor system)   # string - <"aarch64" | "x86_64"> architecture to build EIF for. Defaults to current system's.
+                , arch ? sysPrefix   # string - <"aarch64" | "x86_64"> architecture to build EIF for. Defaults to current system's.
                 }: pkgs.stdenv.mkDerivation {
                   pname = "${name}.eif";
                   inherit version;
