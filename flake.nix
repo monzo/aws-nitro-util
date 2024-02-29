@@ -283,6 +283,10 @@
             installPhase = "mkdir -p $out && cp -r ./init $out/";
           };
 
+          packages.nitroKernelModule = pkgs.callPackage ./nitroKernelModule.nix {
+            kernel = pkgs.linux;
+          };
+
           checks = {
             # make sure we can build init.c
             inherit (packages) eif-init;
