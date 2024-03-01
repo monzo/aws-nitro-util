@@ -2,12 +2,15 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/73de017ef2d18a04ac4bfd0c02650007ccb31c2a";
 
-    nitro-util.url = "github:monzo/aws-nitro-util";
+    nitro-util.url = "github:monzo/aws-nitro-util/kernel";
     nitro-util.inputs.nixpkgs.follows = "nixpkgs";
   };
   outputs = { nitro-util, nixpkgs, ... }:
     let
-      pkgs = nixpkgs.legacyPackages.aarch64-linux;
+      system = "aarch64-linux";
+      pkgs = nixpkgs.legacyPackages.${system};
+      nitro = nitro-util.lib.${system};
+      nitroPkgs = nitro-util.packages.${system};
     in
     {
 
@@ -21,23 +24,36 @@
           done
         '';
 
-        closure = pkgs.runCommandNoCC "closure" {} ''
+        closure = pkgs.runCommandNoCC "closure" { } ''
           # mkdir $out
           ${pkgs.nix}/bin/nix-store --query --references ${myScript} $out; 
         '';
 
         tmp = pkgs.buildEnv {
           name = "tmp";
-          buildInputs = [ myScript];
+          buildInputs = [ myScript ];
           paths = [ myScript ];
         };
 
+        kernel = pkgs.linux;
 
 
-        eif = {
-          
-         };
+        eif = nitro.mkEif {
+          # use AWS' nitro-cli kernel and kernelConfig
+          # inherit (nitro.blobs) kernel kernelConfig;
+          kernel = pkgs.linux + "/Image";
+          kernelConfig = pkgs.linux.configfile;
 
+          name = "eif-hello-world";
+          ramdisks = nitro.mkRamdisksFrom {
+              # use AWS' nitro kernel module
+              nsmKo = nitroPkgs.nitroKernelModule;
+              # set rootfs to your package's path
+              rootfs = nixpkgs.legacyPackages.${system}.hello;
+              entrypoint = "/bin/hello";
+              env = "";
+            };
+        };
       };
     };
 }

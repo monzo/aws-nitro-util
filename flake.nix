@@ -64,6 +64,20 @@
                   x86_64 = blobsFor "bzImage" "x86_64";
                 };
 
+              /*
+                Makes sys and user ramdisks. See mkSysRamdisk and mkUserRamdisk
+              */
+              mkRamdisksFrom =
+                { init ? self.packages.${system}.eif-init
+                , nsmKo      # string - path the nitro kernel module
+                , entrypoint # string - command to execute after encave boot - this is the path to your entrypoint binary inside rootfs)
+                , env        # string - environment variables to pass to the entrypoint)
+                , rootfs     # path   - the root filesystem
+                }: [
+                  (lib.mkSysRamdisk { inherit init nsmKo; })
+                  (lib.mkUserRamdisk { inherit entrypoint env rootfs; })
+                ];
+
               /**
                * Assembles an initramfs archive from a compiled init binary and a compiled Nitro kernel module.
                *
