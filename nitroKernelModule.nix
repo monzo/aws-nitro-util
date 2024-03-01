@@ -1,6 +1,7 @@
 { fetchFromGitHub
 , stdenv
 , kernel
+, flags ? []
 , ...
 }:
 stdenv.mkDerivation rec {
@@ -18,16 +19,17 @@ stdenv.mkDerivation rec {
   hardeningDisable = [ "pic" "format" ];
   nativeBuildInputs = kernel.moduleBuildDependencies; # 2
 
-  makeFlags = [
+  makeFlags = flags ++ [
     "KERNELRELEASE=${kernel.modDirVersion}"
+    # "ARCH="
+    # "CROSS_COMPILE="
+    "-C ${kernel.dev}/lib/modules/${kernel.modDirVersion}/build" # 4
   ];
 
-  BUILDDIR = "${kernel.dev}/lib/modules/${kernel.modDirVersion}/build"; # 4
 
   buildPhase = ''
     # TODO - cross compile
-    # make ARCH=$(ARCH) CROSS_COMPILE=$(CROSS_COMPILE) -C $(BUILDDIR)/linux M=$(PWD)/nsm-driver
-    make -C $BUILDDIR M=$PWD/nsm-driver
+    make $makeFlags M=$PWD/nsm-driver
   '';
 
   installPhase = ''

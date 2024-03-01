@@ -31,10 +31,31 @@
                 let
                   blobsFor = kName: prefix: rec {
                     blobPath = self.packages.${system}.aws-nitro-cli-src + "/blobs/${prefix}";
+
+                    /*
+                      The kernel binary. Note you can use `${pkgs.linux}/<bzImage/Image>` instead
+                      to use a kernel from nixpkgs
+                    */
                     kernel = blobPath + "/${kName}";
                     kernelConfig = blobPath + "/${kName}.config";
                     cmdLine = blobPath + "/cmdline";
+
+                    /* 
+                      nitro kernel module as pre-compiled by AWs
+
+                      Note you can use `packages.<system>.nitroKernelModule` instead,
+                      and avoid using a downloaded binary blob.
+
+                      You also don't need this if you are using a mainline linux Kernel v6.8+
+                    */
                     nsmKo = blobPath + "/nsm.ko";
+
+                    /* 
+                      init.c program (to boot up the enclave) as pre-compiled by AWs
+
+                      Note you can use `packages.<system>.eif-init` instead,
+                      and avoid using a downloaded binary blob.
+                    */
                     init = blobPath + "/init";
                   };
                 in
@@ -225,6 +246,7 @@
               cargoLock.lockFile = src + "/Cargo.lock";
             };
 
+
             checks = {
               # make sure we can build the eif-cli
               inherit (packages) eif-cli;
@@ -268,24 +290,47 @@
           pkgs = nixpkgs.legacyPackages."${system}";
         in
         rec {
-          # init.c, compiled and statically linked from https://github.com/aws/aws-nitro-enclaves-sdk-bootstrap
-          packages.eif-init = pkgs.stdenv.mkDerivation {
-            name = "eif-init";
-            src = (pkgs.fetchFromGitHub {
-              owner = "aws";
-              repo = "aws-nitro-enclaves-sdk-bootstrap";
-              rev = "746ec5d";
-              sha256 = "sha256-KtO/pNYI5uvXrVYZszES6Z0ShkDgORulMxBWWoiA+tg=";
-            }) + "/init"; # we just need the subfolder of this repo
+          /*
+            init.c, compiled and statically linked from https://github.com/aws/aws-nitro-enclaves-sdk-bootstrap
+           */
+          packages.eif-init = (crossCompile system).eif-init;
 
-            nativeBuildInputs = [ pkgs.glibc.static ];
-            buildPhase = "make";
-            installPhase = "mkdir -p $out && cp -r ./init $out/";
-          };
+          /* nsm.ko, from from https://github.com/aws/aws-nitro-enclaves-sdk-bootstrap,
+             compiled against `pkgs.linux`
 
-          packages.nitroKernelModule = pkgs.callPackage ./nitroKernelModule.nix {
-            kernel = pkgs.linux;
-          };
+             You can compile against your own kernel like so (for linux-rt, for example):
+
+             ```
+             my-nsmKo = nitro.packages.aarch64-linux.nitroKernelModule.override {
+               kernel = pkgs.linux-rt;
+             };
+             ```
+          */
+          packages.nitroKernelModule = (crossCompile system).nitroKernelModule;
+
+
+          /*
+            Takes the system that you would like to compile for,
+            and returns an attribute set with some packages cross-compiled for that system.
+
+            Returns normal, non-cross-compiled packages when system == crossSystem.
+            
+            For example:
+
+            `init-for-x86 = (nitro.crossCompile "x86_64-linux").eif-init;`
+
+            Note it is currently not possible to compile init.c and the Kernel on darwin.
+          */
+          crossCompile = crossSystem:
+            let crossPkgs = if (system == crossSystem) then pkgs else import nixpkgs { localSystem = system; inherit crossSystem; }; in
+            {
+              nitroKernelModule = crossPkgs.callPackage ./nitroKernelModule.nix {
+                kernel = crossPkgs.linux;
+              };
+
+              eif-init = crossPkgs.callPackage ./initc.nix { };
+            };
+
 
           checks = {
             # make sure we can build init.c
