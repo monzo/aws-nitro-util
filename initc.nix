@@ -13,5 +13,5 @@ stdenv.mkDerivation {
 
   nativeBuildInputs = [ glibc.static ];
   buildPhase = "make";
-  installPhase = "mkdir -p $out && cp -r ./init $out/";
+  installPhase = "cp -r ./init $out";
 }
