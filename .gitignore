@@ -1,4 +1,7 @@
 eif-cli/target
 result
 
+examples/**/result
+examples/**/flake.lock
+
 **/.idea/

@@ -91,15 +91,15 @@
                */
               mkSysRamdisk =
                 { name ? "bootstrap-initramfs"
-                , init ? packages.eif-init    # path (derivation)
-                , nsmKo                       # path (derivation)
+                , init ? self.packages.${system}.eif-init # path (derivation)
+                , nsmKo                                   # path (derivation)
                 }:
                 lib.mkCpioArchive {
                   inherit name;
                   src = pkgs.runCommand "${name}-fs" { } ''
                     mkdir -p  $out/dev
-                    cp ${nsmKo} $out
-                    cp ${init} $out
+                    cp ${nsmKo} $out/nsm.ko
+                    cp ${init} $out/init
                   '';
                 };
 

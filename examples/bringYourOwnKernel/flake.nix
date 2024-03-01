@@ -29,11 +29,11 @@
           ${pkgs.nix}/bin/nix-store --query --references ${myScript} $out; 
         '';
 
-        tmp = pkgs.buildEnv {
-          name = "tmp";
-          buildInputs = [ myScript ];
-          paths = [ myScript ];
-        };
+        # tmp = pkgs.buildEnv {
+        #   name = "tmp";
+        #   buildInputs = [ myScript ];
+        #   paths = [ myScript ];
+        # };
 
         kernel = pkgs.linux;
 
@@ -46,14 +46,47 @@
 
           name = "eif-hello-world";
           ramdisks = nitro.mkRamdisksFrom {
-              # use AWS' nitro kernel module
-              nsmKo = nitroPkgs.nitroKernelModule;
-              # set rootfs to your package's path
-              rootfs = nixpkgs.legacyPackages.${system}.hello;
-              entrypoint = "/bin/hello";
-              env = "";
-            };
+            nsmKo = nitroPkgs.nitroKernelModule;
+            rootfs = nixpkgs.legacyPackages.${system}.hello;
+            entrypoint = "/bin/hello";
+            env = "";
+          };
         };
+
+        eif2 = nitro.mkEif {
+          # kernel = nitro.blobs.aarch64.kernel;
+          # kernelConfig = nitro.blobs.aarch64.kernelConfig;
+
+
+          kernel = pkgs.linux + "/Image";
+          kernelConfig = pkgs.linux.configfile;
+
+          name = "eif-hello-world";
+          ramdisks = nitro.mkRamdisksFrom {
+            # init = nitro.blobs.aarch64.init;
+
+
+            # nsmKo = nitro.blobs.aarch64.nsmKo;
+            nsmKo = nitroPkgs.nitroKernelModule;
+
+
+            rootfs = nixpkgs.legacyPackages.${system}.hello;
+            entrypoint = "/bin/hello";
+            env = "";
+          };
+
+        };
+
+        tmp = pkgs.stdenv;
+        # debugUsrInit = nitro.mkUserRamdisk {
+        #   rootfs = nixpkgs.legacyPackages.${system}.hello;
+        #   entrypoint = "/bin/hello";
+        #   env = "";
+        # };
+
+        # debugSysInit = nitro.mkSysRamdisk {
+        #   nsmKo = nitroPkgs.nitroKernelModule;
+        # };
       };
     };
 }

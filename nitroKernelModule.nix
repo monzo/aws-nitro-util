@@ -24,6 +24,7 @@ stdenv.mkDerivation rec {
     # "ARCH="
     # "CROSS_COMPILE="
     "-C ${kernel.dev}/lib/modules/${kernel.modDirVersion}/build" # 4
+    "ARCH=${if stdenv.isAarch64 then "arm64" else "x86_64"}"
   ];
 
 
