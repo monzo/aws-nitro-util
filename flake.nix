@@ -119,7 +119,7 @@
                *  - PCRs in derivation/pcr.json 
                */
               mkEif =
-                { name ? "${name}-linux-${arch}-${version}.eif"
+                { name ? "image"
                 , version ? "0.1-dev"
                 , ramdisks           # list[path] of ramdisks to use for boot. See mkUserRamdisk and mkSysRamdisk
                 , kernel             # path (derivation) to compiled kernel binary
@@ -127,7 +127,8 @@
                 , cmdline ? "reboot=k panic=30 pci=off nomodules console=ttyS0 random.trust_cpu=on root=/dev/ram0" # string
                 , arch ? sysPrefix   # string - <"aarch64" | "x86_64"> architecture to build EIF for. Defaults to current system's.
                 }: pkgs.stdenv.mkDerivation {
-                  inherit name version;
+                  inherit version;
+                  name = "${name}-linux-${arch}-${version}.eif";
 
                   buildInputs = [ packages.eif-cli pkgs.jq ];
                   unpackPhase = ":"; # nothing to unpack 
