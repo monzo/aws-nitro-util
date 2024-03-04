@@ -26,11 +26,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1709309551,
-        "narHash": "sha256-Gvij2xIxkjvJsL29psyHSHyL5dmnetT2f8hEgAijcF8=",
+        "lastModified": 1709311800,
+        "narHash": "sha256-u5DJrQFWtO7OGvxy7gRMGKRnXT8T7fCLFC10bPGBLs8=",
         "owner": "monzo",
         "repo": "aws-nitro-util",
-        "rev": "30f00b95b8a1074efa508a7d6a5684aad97dee47",
+        "rev": "a40a49ce5f8eaa5dc5c70ef70de830c850b2115a",
         "type": "github"
       },
       "original": {
