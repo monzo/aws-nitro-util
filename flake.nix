@@ -192,6 +192,44 @@
                     jq < $out/pcr.json
                   '';
                 };
+              inherit pkgs;
+
+              buildEif =
+                let
+                  defaultKernel = if sysPrefix == "aarch64" then "${pkgs.linux_6_8}/Image" else "${pkgs.linux_6_8}/bzImage";
+                in
+
+                { name ? "image"
+                , version ? "0.1-dev"
+                , kernel ? (defaultKernel arch) # path (derivation) to compiled kernel binary
+                , kernelConfig       # path (derivation) to kernel config file
+                , cmdline ? "reboot=k panic=30 pci=off nomodules console=ttyS0 random.trust_cpu=on root=/dev/ram0" # string
+                , arch ? sysPrefix   # string - <"aarch64" | "x86_64"> architecture to build EIF for. Defaults to current system's.
+                  #  if you change this also set `kernel`
+                , copyToRoot
+                , entrypoint
+                , nsmKo ? null
+                , init ? self.crossPackages.${system}."${arch}-linux".eif-init
+                , env ? ""
+                }:
+                let
+                  nixStoreFrom = rootPaths: pkgs.runCommandNoCC "pack-closure" { } ''
+                    mkdir -p $out/nix/store
+                    PATHS=$(cat ${pkgs.closureInfo { inherit rootPaths; }}/store-paths)
+                    for p in $PATHS; do
+                      cp -r $p $out/nix/store
+                    done
+                  '';
+                  rootfs = nixStoreFrom [ copyToRoot ];
+                in
+                lib.mkEif {
+                  inherit kernel kernelConfig cmdline arch;
+
+                  ramdisks = [
+                    (lib.mkSysRamdisk { inherit init nsmKo; })
+                    (lib.mkUserRamdisk { inherit entrypoint env rootfs; })
+                  ];
+                };
 
 
               # returns a derivation that is folder containing a deterministic filesystem of the image's layers
@@ -260,6 +298,30 @@
               cargoLock.lockFile = src + "/Cargo.lock";
             };
 
+            /*
+             * Takes the system that you would like to compile for,
+             * and returns an attribute set with some packages cross-compiled for that system.
+             * 
+             * Returns normal, non-cross-compiled packages when system == crossSystem.
+             * 
+             * For example:
+             * 
+             * `init-for-x86 = (nitro.crossCompile "x86_64-linux").eif-init;`
+             * 
+             * Note it is currently not possible to compile init.c and the Kernel on darwin.
+             */
+            crossCompile = crossSystem:
+              let crossPkgs = if (system == crossSystem) then pkgs else import nixpkgs { localSystem = system; inherit crossSystem; }; in
+              {
+                eif-init = crossPkgs.callPackage ./init { };
+              };
+
+            crossPackages = {
+              x86_64-linux = crossCompile "x86_64-linux";
+              aarch64-linux = crossCompile "aarch64-linux";
+            };
+
+
 
             checks = {
               # make sure we can build the eif-cli
@@ -304,47 +366,11 @@
           pkgs = nixpkgs.legacyPackages."${system}";
         in
         rec {
-          /*
-            init.c, compiled and statically linked from https://github.com/aws/aws-nitro-enclaves-sdk-bootstrap
-           */
-          packages.eif-init = (crossCompile system).eif-init;
-
-          /* nsm.ko, from from https://github.com/aws/aws-nitro-enclaves-sdk-bootstrap,
-             compiled against `pkgs.linux`
-
-             You can compile against your own kernel like so (for linux-rt, for example):
-
-             ```
-             my-nsmKo = nitro.packages.aarch64-linux.nitroKernelModule.override {
-               kernel = pkgs.linux-rt;
-             };
-             ```
-          */
-          packages.nitroKernelModule = (crossCompile system).nitroKernelModule;
-
 
           /*
-            Takes the system that you would like to compile for,
-            and returns an attribute set with some packages cross-compiled for that system.
-
-            Returns normal, non-cross-compiled packages when system == crossSystem.
-            
-            For example:
-
-            `init-for-x86 = (nitro.crossCompile "x86_64-linux").eif-init;`
-
-            Note it is currently not possible to compile init.c and the Kernel on darwin.
-          */
-          crossCompile = crossSystem:
-            let crossPkgs = if (system == crossSystem) then pkgs else import nixpkgs { localSystem = system; inherit crossSystem; }; in
-            {
-              nitroKernelModule = crossPkgs.callPackage ./nitroKernelModule.nix {
-                kernel = crossPkgs.linux;
-              };
-
-              eif-init = crossPkgs.callPackage ./initc.nix { };
-            };
-
+             * init.c, compiled and statically linked from https://github.com/aws/aws-nitro-enclaves-sdk-bootstrap
+             */
+          packages.eif-init = self.crossPackages.${system}.${system}.eif-init;
 
           checks = {
             # make sure we can build init.c
