@@ -7,10 +7,11 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"go/token"
 	"golang.org/x/sys/unix"
+	"io"
 	"os"
 	"syscall"
+	"unsafe"
 )
 
 const (
@@ -48,13 +49,8 @@ type InitOp interface {
 	doOrDie()
 }
 
-type initErr struct {
-	error
-	msg string
-}
-
-func newErr(err error, msg string) initErr {
-	return initErr{err, msg}
+func newErr(err error, msg string) error {
+	return errors.Join(errors.New(msg), err)
 }
 
 var ops = []InitOp{
@@ -94,12 +90,12 @@ func initDev() error {
 }
 
 func warn(str string) {
-	_, _ = os.Stderr.WriteString(str)
+	_, _ = os.Stderr.WriteString(str + "\n")
 }
 
 func die(str string, err error) {
-	warn(str)
-	var errNo *syscall.Errno
+	warn(str + ": " + err.Error())
+	errNo := new(syscall.Errno)
 	if errors.As(err, errNo) {
 		os.Exit(int(*errNo))
 	}
@@ -151,9 +147,13 @@ func initCgroups() error {
 	r := bufio.NewReader(f)
 
 	// read and discard first line
-	_, _ = r.ReadString('\n')
+	_, err = r.ReadString('\n')
 
-	basePath := "sys/fs/cgroup/"
+	if err != nil {
+		return newErr(err, "readstring: failed to skip first line")
+	}
+
+	basePath := "/sys/fs/cgroup/"
 
 	for {
 		var (
@@ -161,11 +161,14 @@ func initCgroups() error {
 			hier, groups, enabled int
 		)
 		r, err := fmt.Fscanf(r, "%64s %d %d %d\n", &name, &hier, &groups, &enabled)
-		if r == int(token.EOF) {
+		if errors.Is(err, io.EOF) {
 			break
 		}
+		if err != nil {
+			return newErr(err, "fscanf: unexpected error while reading cgroups")
+		}
 		if r != 4 {
-			return newErr(err, "fscanf")
+			return newErr(err, fmt.Sprint("fscanf: got unexpected line, expected 4 elements and got ", r))
 		}
 		if enabled != 0 {
 			path := basePath + name
@@ -184,29 +187,38 @@ func initCgroups() error {
 func initConsole() error {
 	conslePath := "/dev/console"
 	var err error
+	_ = os.Stdin.Close()
 	os.Stdin, err = os.OpenFile(conslePath, os.O_RDONLY|os.O_CREATE, 0666)
 	if err != nil {
 		return newErr(err, "OpenFile failed for stdin")
 	}
+	_ = os.Stdout.Close()
 	os.Stdout, err = os.OpenFile(conslePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
 	if err != nil {
 		return newErr(err, "OpenFile failed for stdout")
 	}
+	warn(fmt.Sprint("opened stdout with fd=", os.Stdout.Fd()))
+	_ = os.Stderr.Close()
 	os.Stderr, err = os.OpenFile(conslePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
 	if err != nil {
 		return newErr(err, "OpenFile failed for stderr")
 	}
+	warn(fmt.Sprint("opened stderr with fd=", os.Stdout.Fd()))
 	return nil
 }
 
 // launch differs from the original C implementation because Go runtimes cannot
 // fork(), so we cannot easily setsid() and setpgid() via the libc API
 func launch(cmd string, args []string, env []string) (pd int, err error) {
-	attrs := &syscall.ProcAttr{Env: env,
+	if env == nil || len(env) == 0 {
+		env = []string{DEFAULT_PATH_ENV}
+	}
+	attrs := &syscall.ProcAttr{
+		Env:   env,
+		Files: []uintptr{os.Stdin.Fd(), os.Stdout.Fd(), os.Stderr.Fd()},
 		Sys: &syscall.SysProcAttr{
-			Setsid:  true,
-			Setpgid: true,
-			Pgid:    0,
+			Setsid: true,
+			//Setpgid: true,
 		},
 	}
 	pid, err := syscall.ForkExec(cmd, args, attrs)
@@ -216,6 +228,8 @@ func launch(cmd string, args []string, env []string) (pd int, err error) {
 	return pid, nil
 }
 
+// consider using https://github.com/hashicorp/go-reap
+// which is perfectly suited for this
 func reapUntil(pid int) syscall.Signal {
 	for {
 		status := new(syscall.WaitStatus)
@@ -226,11 +240,11 @@ func reapUntil(pid int) syscall.Signal {
 			if wpid == pid {
 				if status.Exited() {
 					if status.Signal() != 0 {
-						_, _ = os.Stderr.WriteString("child exited with error\n")
+						warn("child exited with error")
 					}
 					return status.Signal()
 				}
-				_, _ = os.Stderr.WriteString("child exited by signal\n")
+				warn("child exited by signal")
 				return 128 + status.Signal()
 			}
 
@@ -300,6 +314,23 @@ func enclaveReady() error {
 
 func initNsm() {
 	// TODO
+
+	f, err := os.OpenFile(NSM_PATH, syscall.O_RDONLY|syscall.O_CLOEXEC, 0666)
+	if err != nil {
+		panic(err.Error())
+	}
+	var _p0 *byte
+	_p0, err = syscall.BytePtrFromString("")
+	if err != nil {
+		panic(err.Error())
+	}
+	rc, _, err := syscall.Syscall(syscall.SYS_FINIT_MODULE, f.Fd(), uintptr(unsafe.Pointer(_p0)), 0)
+	if rc < 0 {
+		panic("failed to insert nsm driver")
+	}
+
+	_ = f.Close()
+
 }
 
 // based on https://github.com/aws/aws-nitro-enclaves-sdk-bootstrap/blob/main/init/init.c
@@ -310,6 +341,7 @@ func main() {
 	if err := initConsole(); err != nil {
 		die("failed to init console", err)
 	}
+	initNsm()
 	if err := enclaveReady(); err != nil {
 		die("failed to notify readiness", err)
 	}
@@ -342,7 +374,15 @@ func main() {
 
 	pid, err := launch(cmd[0], cmd[1:], env)
 
-	reapUntil(pid)
+	if err != nil {
+		die("failed to launch", err)
+	}
+
+	warn("launched cmd=" + cmd[0])
+
+	signal := reapUntil(pid)
+
+	warn("reaped all children, returned with signal=" + signal.String())
 
 	_ = syscall.Reboot(RB_AUTOBOOT)
 }

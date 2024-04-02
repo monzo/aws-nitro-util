@@ -26,13 +26,14 @@
 
       packages.${system} = rec {
 
+        goinit = pkgs.callPackage ./init {};
+
         myScript = pkgs.writeShellScriptBin "hello" ''
           export PATH="$PATH:${pkgs.busybox}/bin"
           while true;
           do
             echo "hello!";
             sleep 3;
-            lsmod
           done
         '';
 
@@ -90,7 +91,8 @@
           name = "eif-hello-world";
           ramdisks = nitro.mkRamdisksFrom {
             # init = nitro.blobs.aarch64.init;
-            init = nitroPkgs.eif-init;
+            # init = nitroPkgs.eif-init;
+            init = "${goinit}/bin/init";
 
 
             nsmKo = nitro.blobs.aarch64.nsmKo;
