@@ -313,7 +313,10 @@ func enclaveReady() error {
 }
 
 func initNsm() {
-	// TODO
+	if _, err := os.Stat(NSM_PATH); errors.Is(err, os.ErrNotExist) {
+		warn(NSM_PATH + " does not exist - expecting linux kernel 6.8+")
+		return
+	}
 
 	f, err := os.OpenFile(NSM_PATH, syscall.O_RDONLY|syscall.O_CLOEXEC, 0666)
 	if err != nil {
@@ -330,7 +333,6 @@ func initNsm() {
 	}
 
 	_ = f.Close()
-
 }
 
 // based on https://github.com/aws/aws-nitro-enclaves-sdk-bootstrap/blob/main/init/init.c
