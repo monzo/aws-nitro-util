@@ -122,8 +122,12 @@
 
 
           nsmKo = nitro.blobs.aarch64.nsmKo;
-          copyToRoot = myScript;
-          entrypoint = "${myScript}/bin/hello";
+          copyToRoot = pkgs.buildEnv {
+            name = "image-root";
+            paths = [ myScript ];
+            pathsToLink = [ "/bin" ];
+          };
+          entrypoint = "/bin/hello";
           env = "";
         };
 

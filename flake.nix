@@ -213,14 +213,15 @@
                 , env ? ""
                 }:
                 let
-                  nixStoreFrom = rootPaths: pkgs.runCommandNoCC "pack-closure" { } ''
+                  nixStoreFrom = rootPath: pkgs.runCommandNoCC "pack-closure" { } ''
                     mkdir -p $out/nix/store
-                    PATHS=$(cat ${pkgs.closureInfo { inherit rootPaths; }}/store-paths)
+                    PATHS=$(cat ${pkgs.closureInfo { rootPaths = [ rootPath ] ; }}/store-paths)
                     for p in $PATHS; do
                       cp -r $p $out/nix/store
                     done
+                    cp -r ${rootPath}/* $out
                   '';
-                  rootfs = nixStoreFrom [ copyToRoot ];
+                  rootfs = nixStoreFrom copyToRoot;
                 in
                 lib.mkEif {
                   inherit kernel kernelConfig cmdline arch;
