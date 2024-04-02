@@ -11,10 +11,11 @@
       pkgs = nixpkgs.legacyPackages.${system};
       nitro = nitro-util.lib.${system};
       nitroPkgs = nitro-util.packages.${system};
+
       kernel = pkgs.linux_6_8;
       # pkgs.linux;
 
-      nixStoreFrom = { rootPaths }: pkgs.runCommandNoCC "pack-closure" {}''
+      nixStoreFrom = { rootPaths }: pkgs.runCommandNoCC "pack-closure" { } ''
         mkdir -p $out/nix/store
         PATHS=$(cat ${pkgs.closureInfo { inherit rootPaths; }}/store-paths)
         for p in $PATHS; do
@@ -26,7 +27,7 @@
 
       packages.${system} = rec {
 
-        goinit = pkgs.callPackage ./init {};
+        goinit = pkgs.callPackage ./init { };
 
         myScript = pkgs.writeShellScriptBin "hello" ''
           export PATH="$PATH:${pkgs.busybox}/bin"
@@ -105,6 +106,25 @@
             entrypoint = "${myScript}/bin/hello";
             env = "";
           };
+        };
+
+        eif3 = nitro.buildEif {
+          kernel = nitro.blobs.aarch64.kernel;
+          kernelConfig = nitro.blobs.aarch64.kernelConfig;
+          # kernel = kernel + "/Image";
+          # kernelConfig = kernel.configfile;
+
+          name = "eif-hello-world";
+
+          # init = nitro.blobs.aarch64.init;
+          # init = nitroPkgs.eif-init;
+          # init = "${goinit}/bin/init";
+
+
+          nsmKo = nitro.blobs.aarch64.nsmKo;
+          copyToRoot = myScript;
+          entrypoint = "${myScript}/bin/hello";
+          env = "";
         };
 
         tmp = pkgs.stdenv;

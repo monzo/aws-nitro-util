@@ -209,7 +209,7 @@
                 , copyToRoot
                 , entrypoint
                 , nsmKo ? null
-                , init ? self.crossPackages.${system}."${arch}-linux".eif-init
+                , init ? self.crossPackages.${system}."${arch}-linux".eif-init + "/bin/init"
                 , env ? ""
                 }:
                 let
