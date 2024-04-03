@@ -46,41 +46,33 @@
 
         # kernel = pkgs.linux;
 
+        eif = let kernel = pkgs.linux_4_19; in
+          nitro.buildEif {
+            # kernel = kernel + "/Image";
+            # kernelConfig = kernel.configfile;
+          kernel = nitro.blobs.aarch64.kernel;
+          kernelConfig = nitro.blobs.aarch64.kernelConfig;
 
-        eif = nitro.mkEif {
-          # use AWS' nitro-cli kernel and kernelConfig
-          # inherit (nitro.blobs) kernel kernelConfig;
-          kernel = kernel + "/Image";
-          kernelConfig = kernel.configfile;
+            name = "eif-hello-world";
 
-          name = "eif-hello-world";
-
-          cmdline = "reboot=k panic=30 pci=off nomodules console=ttyS0 random.trust_cpu=on root=/dev/ram0";
-          ramdisks = nitro.mkRamdisksFrom {
             nsmKo = null;
-            rootfs = nixStoreFrom { rootPaths = [ myScript ]; };
-            entrypoint = "${myScript}/bin/hello";
+
+            # init = nitro.blobs.aarch64.init;
+            # init = nitroPkgs.eif-init;
+            # init = "${goinit}/bin/init";
+
+
+            # nsmKo = nitro.blobs.aarch64.nsmKo;
+            copyToRoot = pkgs.buildEnv {
+              name = "image-root";
+              paths = [ myScript ];
+              pathsToLink = [ "/bin" ];
+            };
+            # cmdline = "reboot=k panic=30 pci=off modules_load=nsm console=ttyS0 random.trust_cpu=on root=/dev/ram0";
+            cmdline = "reboot=k panic=30 pci=off nomodules console=ttyS0 random.trust_cpu=on root=/dev/ram0";
+            entrypoint = "/bin/hello";
             env = "";
           };
-        };
-
-        # eif-rc = nitro.mkEif {
-        #   # use AWS' nitro-cli kernel and kernelConfig
-        #   # inherit (nitro.blobs) kernel kernelConfig;
-        #   kernel = kernel + "/Image";
-        #   kernelConfig = kernel.configfile;
-
-        #   name = "eif-hello-world";
-        #   ramdisks = nitro.mkRamdisksFrom {
-        #     nsmKo = nitroPkgs.nitroKernelModule.override {
-        #       kernel = kernel;
-        #     };
-        #     rootfs = nixpkgs.legacyPackages.${system}.hello;
-        #     entrypoint = "/bin/hello";
-        #     env = "";
-        #   };
-        # };
-
 
 
         eif2 = nitro.mkEif {
@@ -121,7 +113,9 @@
           # init = "${goinit}/bin/init";
 
 
-          nsmKo = nitro.blobs.aarch64.nsmKo;
+          nsmKo =
+            # null; # also works!
+            nitro.blobs.aarch64.nsmKo;
           copyToRoot = pkgs.buildEnv {
             name = "image-root";
             paths = [ myScript ];
