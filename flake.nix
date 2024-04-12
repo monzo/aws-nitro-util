@@ -32,25 +32,19 @@
                     blobPath = self.packages.${system}.aws-nitro-cli-src + "/blobs/${prefix}";
 
                     /*
-                      The kernel binary. Note you can use `${pkgs.linux}/<bzImage/Image>` instead
-                      to use a kernel from nixpkgs
+                      The kernel binary as pre-compiled by AWS
                     */
                     kernel = blobPath + "/${kName}";
                     kernelConfig = blobPath + "/${kName}.config";
                     cmdLine = blobPath + "/cmdline";
 
                     /* 
-                      nitro kernel module as pre-compiled by AWs
-
-                      Note you can use `packages.<system>.nitroKernelModule` instead,
-                      and avoid using a downloaded binary blob.
-
-                      You also don't need this if you are using a mainline linux Kernel v6.8+
+                      nitro kernel module as pre-compiled by AWS
                     */
                     nsmKo = blobPath + "/nsm.ko";
 
                     /* 
-                      init.c program (to boot up the enclave) as pre-compiled by AWs
+                      init.c program (to boot up the enclave) as pre-compiled by AWS
 
                       Note you can use `packages.<system>.eif-init` instead,
                       and avoid using a downloaded binary blob.
@@ -193,13 +187,9 @@
               inherit pkgs;
 
               buildEif =
-                let
-                  defaultKernel = if sysPrefix == "aarch64" then "${pkgs.linux_6_8}/Image" else "${pkgs.linux_6_8}/bzImage";
-                in
-
                 { name ? "image"
                 , version ? "0.1-dev"
-                , kernel ? (defaultKernel arch) # path (derivation) to compiled kernel binary
+                , kernel # path (derivation) to compiled kernel binary
                 , kernelConfig       # path (derivation) to kernel config file
                 , cmdline ? "reboot=k panic=30 pci=off nomodules console=ttyS0 random.trust_cpu=on root=/dev/ram0" # string
                 , arch ? sysPrefix   # string - <"aarch64" | "x86_64"> architecture to build EIF for. Defaults to current system's.
@@ -326,7 +316,7 @@
               # make sure we can build the eif-cli
               inherit (packages) eif-cli;
 
-              # build a simple (non-bootable) EIF image for ARM64 as part of checks
+              # build a simple (non-bootable) EIF image for x86-64 as part of checks
               test-make-eif = lib.mkEif {
                 arch = "x86_64";
                 name = "test";
