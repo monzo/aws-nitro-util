@@ -35,12 +35,6 @@ type Mkdir struct {
 	mode uint32
 }
 
-type Mknod struct {
-	path         string
-	mode         os.FileMode
-	major, minor uint32
-}
-
 type Symlink struct {
 	linkpath, target string
 }
@@ -279,7 +273,7 @@ func readFile(path string) ([]string, error) {
 }
 
 func enclaveReady() error {
-	socket, err := syscall.Socket(syscall.AF_VSOCK, syscall.SOCK_STREAM, 0)
+	socket, err := unix.Socket(unix.AF_VSOCK, unix.SOCK_STREAM, 0)
 	if err != nil {
 		return newErr(err, "failed open socket")
 	}
@@ -291,13 +285,13 @@ func enclaveReady() error {
 	if err != nil {
 		return newErr(err, "failed to connect")
 	}
-	_, err = syscall.Write(socket, []byte{HEART_BEAT})
+	_, err = unix.Write(socket, []byte{HEART_BEAT})
 	if err != nil {
 		return newErr(err, "failed to write heartbeat")
 	}
 
 	buf := make([]byte, 1)
-	_, err = syscall.Read(socket, buf)
+	_, err = unix.Read(socket, buf)
 	if err != nil {
 		return newErr(err, "failed to read heartbeat")
 	}
@@ -305,7 +299,7 @@ func enclaveReady() error {
 		return errors.New("received wrong heartbeat")
 	}
 
-	err = syscall.Close(socket)
+	err = unix.Close(socket)
 	if err != nil {
 		return newErr(err, "close vsock")
 	}
@@ -357,10 +351,10 @@ func main() {
 		die("failed to read /cmd", err)
 	}
 
-	if err := syscall.Chdir("/rootfs"); err != nil {
+	if err := unix.Chdir("/rootfs"); err != nil {
 		die("failed to chdir", err)
 	}
-	if err := syscall.Chroot("/rootfs"); err != nil {
+	if err := unix.Chroot("/rootfs"); err != nil {
 		die("failed to chroot", err)
 	}
 
@@ -386,5 +380,5 @@ func main() {
 
 	warn("reaped all children, returned with signal=" + signal.String())
 
-	_ = syscall.Reboot(RB_AUTOBOOT)
+	_ = unix.Reboot(RB_AUTOBOOT)
 }
