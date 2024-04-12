@@ -42,16 +42,21 @@ Flake quick start, to build an enclave with nixpkgs' `hello` :
         nitro = nitro-util.lib.${system};
         eifArch = "x86_64";
     in {
-        packages.${system}.eif-hello-world = nitro.mkEif {
-            # use AWS' nitro-cli kernel and kernelConfig
-            inherit (nitro.blobs.${eifArch}) kernel kernelConfig;
-
-            arch = eifArch;
+        packages.${system}.eif-hello-world = nitro.buildEif {
             name = "eif-hello-world";
-            ramdisks = [
-                (lib.mkSysRamdisk { init = lib.blobs.${eifArch}.init; nsmKo = lib.blobs.${eifArch}.nsmKo; })
-                (lib.mkUserRamdisk { entrypoint = "/bin/hello"; env = ""; rootfs = pkgs.legacyPackages.${system}.hello; })
-            ];
+
+            # use AWS' nitro-cli binary blobs
+            inherit (nitro.blobs.${eifArch}) kernel kernelConfig init nsmKo;
+			
+            arch = eifArch;
+
+            entrypoint = "/bin/hello";
+			env = ""; 
+			copyToRoot = pkgs.buildEnv {
+				name = "image-root";
+				paths = [ pkgs.hello ];
+				pathsToLink = [ "/bin" ];
+			};
         };
     };
 }
