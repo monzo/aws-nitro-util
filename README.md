@@ -57,6 +57,8 @@ Flake quick start, to build an enclave with nixpkgs' `hello` :
 }
 ```
 
+See more examples in [`examples/`](./examples/).
+
 ## Design
 
 monzo/aws-nitro-util is made up of a small CLI that wraps  [aws/aws-nitro-enclaves-image-format](https://github.com/aws/aws-nitro-enclaves-image-format/) (which allows building an EIF from a specific file structure) and of Nix utilities to reproducibly build the CLI and its inputs.

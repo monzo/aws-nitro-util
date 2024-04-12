@@ -21,8 +21,7 @@
           let
             pkgs = nixpkgs.legacyPackages."${system}";
             # returns 'aarch64' from 'aarch64-linux'
-            sysPrefix = with pkgs.lib.strings;
-              if (hasSuffix "-linux" system) then (removeSuffix "-linux" system) else (removeSuffix "-darwin" system);
+            sysPrefix = pkgs.stdenv.hostPlatform.uname.processor;
           in
           rec {
             lib = {
@@ -154,7 +153,7 @@
                *  - PCRs in derivation/pcr.json 
                */
               mkEif =
-                { name ? "${name}-linux-${arch}-${version}.eif"
+                { name ? "${name}-linux-${arch}-${version}-eif"
                 , version ? "0.1-dev"
                 , ramdisks           # list[path] of ramdisks to use for boot. See mkUserRamdisk and mkSysRamdisk
                 , kernel             # path (derivation) to compiled kernel binary
