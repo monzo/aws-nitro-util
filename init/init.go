@@ -317,11 +317,11 @@ func initNsm() {
 		panic(err.Error())
 	}
 	var _p0 *byte
-	_p0, err = syscall.BytePtrFromString("")
+	_p0, err = unix.BytePtrFromString("")
 	if err != nil {
 		panic(err.Error())
 	}
-	rc, _, err := syscall.Syscall(syscall.SYS_FINIT_MODULE, f.Fd(), uintptr(unsafe.Pointer(_p0)), 0)
+	rc, _, err := unix.Syscall(unix.SYS_FINIT_MODULE, f.Fd(), uintptr(unsafe.Pointer(_p0)), 0)
 	if rc < 0 {
 		panic("failed to insert nsm driver")
 	}
