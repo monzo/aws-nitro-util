@@ -14,44 +14,29 @@
 
       kernel = pkgs.linux_6_8;
       # pkgs.linux;
-
-      nixStoreFrom = { rootPaths }: pkgs.runCommandNoCC "pack-closure" { } ''
-        mkdir -p $out/nix/store
-        PATHS=$(cat ${pkgs.closureInfo { inherit rootPaths; }}/store-paths)
-        for p in $PATHS; do
-          cp -r $p $out/nix/store
-        done
-      '';
     in
     {
 
       packages.${system} = rec {
 
-        goinit = pkgs.callPackage ./init { };
-
         myScript = pkgs.writeShellScriptBin "hello" ''
           export PATH="$PATH:${pkgs.busybox}/bin"
           while true;
           do
-            echo "hello!";
+            echo "hello there!";
             sleep 3;
           done
         '';
 
-        # tmp = pkgs.buildEnv {
-        #   name = "tmp";
-        #   buildInputs = [ myScript ];
-        #   paths = [ myScript ];
-        # };
-
-        # kernel = pkgs.linux;
-
-        eif = let kernel = pkgs.linux_4_19; in
+        eif = let kernel = pkgs.linux_6_8; in
           nitro.buildEif {
-            # kernel = kernel + "/Image";
-            # kernelConfig = kernel.configfile;
-          kernel = nitro.blobs.aarch64.kernel;
-          kernelConfig = nitro.blobs.aarch64.kernelConfig;
+            kernel = kernel + "/Image";
+            kernelConfig =
+              # kernel.configfile;
+              # copy kernel config contents to a new file
+              (pkgs.writeTextDir "Image.config" (builtins.readFile kernel.configfile)) + "/Image.config";
+            # kernel = nitro.blobs.aarch64.kernel;
+            # kernelConfig = nitro.blobs.aarch64.kernelConfig;
 
             name = "eif-hello-world";
 
@@ -75,31 +60,6 @@
           };
 
 
-        eif2 = nitro.mkEif {
-          kernel = nitro.blobs.aarch64.kernel;
-          kernelConfig = nitro.blobs.aarch64.kernelConfig;
-          # kernel = kernel + "/Image";
-          # kernelConfig = kernel.configfile;
-
-          name = "eif-hello-world";
-          ramdisks = nitro.mkRamdisksFrom {
-            # init = nitro.blobs.aarch64.init;
-            # init = nitroPkgs.eif-init;
-            init = "${goinit}/bin/init";
-
-
-            nsmKo = nitro.blobs.aarch64.nsmKo;
-            # nsmKo = nitroPkgs.nitroKernelModule.override {
-            #   inherit kernel;
-            # };
-
-
-            rootfs = nixStoreFrom { rootPaths = [ myScript ]; };
-            entrypoint = "${myScript}/bin/hello";
-            env = "";
-          };
-        };
-
         eif3 = nitro.buildEif {
           kernel = nitro.blobs.aarch64.kernel;
           kernelConfig = nitro.blobs.aarch64.kernelConfig;
@@ -114,8 +74,8 @@
 
 
           nsmKo =
-            # null; # also works!
-            nitro.blobs.aarch64.nsmKo;
+            null; # also works!
+          # nitro.blobs.aarch64.nsmKo;
           copyToRoot = pkgs.buildEnv {
             name = "image-root";
             paths = [ myScript ];
@@ -126,15 +86,6 @@
         };
 
         tmp = pkgs.stdenv;
-        # debugUsrInit = nitro.mkUserRamdisk {
-        #   rootfs = nixpkgs.legacyPackages.${system}.hello;
-        #   entrypoint = "/bin/hello";
-        #   env = "";
-        # };
-
-        # debugSysInit = nitro.mkSysRamdisk {
-        #   nsmKo = nitroPkgs.nitroKernelModule;
-        # };
       };
     };
 }

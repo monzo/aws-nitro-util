@@ -8,5 +8,4 @@
 
   CGO_ENABLED = 0;
   ldflags = [ "-s" "-w" ];
-  # nativeBuildInputs = [ glibc.static ];
 }
