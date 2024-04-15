@@ -154,15 +154,15 @@
                 , kernelConfig       # path (derivation) to kernel config file
                 , cmdline ? "reboot=k panic=30 pci=off nomodules console=ttyS0 random.trust_cpu=on root=/dev/ram0" # string
                 , arch ? sysPrefix   # string - <"aarch64" | "x86_64"> architecture to build EIF for. Defaults to current system's.
-                }: pkgs.stdenv.mkDerivation {
+                }: pkgs.stdenv.mkDerivation rec {
                   inherit name version;
 
                   buildInputs = [ packages.eif-cli pkgs.jq ];
                   unpackPhase = ":"; # nothing to unpack 
+                  eif = "${packages.eif-cli}/bin/eif-cli";
+                  ramdisksArgs = with pkgs.lib; concatStrings (map (ramdisk: "--ramdisk ${ramdisk} ") ramdisks);
+                  cmd = ''${eif} --sha384 --arch ${arch} --kernel ${kernel} --kernel_config ${kernelConfig} --cmdline "${cmdline}" ${ramdisksArgs} --name ${name} --version ${version} --output image.eif >> log.txt'';
                   buildPhase =
-                    let
-                      ramdisksArgs = with pkgs.lib; concatStrings (map (ramdisk: "--ramdisk ${ramdisk} ") ramdisks);
-                    in
                     ''
                       eif=${packages.eif-cli}/bin/eif-cli
 
@@ -170,7 +170,8 @@
                       echo "Kernel config:     ${kernelConfig}"
                       echo "cmdline:           ${cmdline}"
                       echo "ramdisks:          ${pkgs.lib.concatStrings ramdisks}"
-                      $eif --sha384 --arch ${arch} --kernel ${kernel} --kernel_config ${kernelConfig} --cmdline "${cmdline}" ${ramdisksArgs} --name ${name} --version ${version} --output image.eif >> log.txt
+                      echo Command is '${cmd}'
+                      ${cmd}
                     '';
 
                   installPhase = ''

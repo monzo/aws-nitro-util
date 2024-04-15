@@ -6,7 +6,6 @@
 }:
 let
   myScript = writeShellScriptBin "hello" ''
-    export PATH="$PATH:${busybox}/bin"
 
     while true;
     do
