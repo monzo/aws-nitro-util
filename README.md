@@ -1,5 +1,3 @@
-# AWS Nitro util
-
 # AWS Nitro utilities
 
 This repo contains a Nix flake with some helpers to reproducibly build AWS Nitro Enclave image files.
