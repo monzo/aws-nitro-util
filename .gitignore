@@ -1,4 +1,6 @@
 eif-cli/target
 result
 
+examples/**/result
+
 **/.idea/

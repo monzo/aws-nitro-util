@@ -21,8 +21,7 @@
           let
             pkgs = nixpkgs.legacyPackages."${system}";
             # returns 'aarch64' from 'aarch64-linux'
-            sysPrefix = with pkgs.lib.strings;
-              if (hasSuffix "-linux" system) then (removeSuffix "-linux" system) else (removeSuffix "-darwin" system);
+            sysPrefix = pkgs.stdenv.hostPlatform.uname.processor;
           in
           rec {
             lib = {
@@ -31,10 +30,25 @@
                 let
                   blobsFor = kName: prefix: rec {
                     blobPath = self.packages.${system}.aws-nitro-cli-src + "/blobs/${prefix}";
+
+                    /*
+                      The kernel binary as pre-compiled by AWS
+                    */
                     kernel = blobPath + "/${kName}";
                     kernelConfig = blobPath + "/${kName}.config";
                     cmdLine = blobPath + "/cmdline";
+
+                    /* 
+                      nitro kernel module as pre-compiled by AWS
+                    */
                     nsmKo = blobPath + "/nsm.ko";
+
+                    /* 
+                      init.c program (to boot up the enclave) as pre-compiled by AWS
+
+                      Note you can use `packages.<system>.eif-init` instead,
+                      and avoid using a downloaded binary blob.
+                    */
                     init = blobPath + "/init";
                   };
                 in
@@ -42,6 +56,20 @@
                   aarch64 = blobsFor "Image" "aarch64";
                   x86_64 = blobsFor "bzImage" "x86_64";
                 };
+
+              /*
+                Makes sys and user ramdisks. See mkSysRamdisk and mkUserRamdisk
+              */
+              mkRamdisksFrom =
+                { init ? self.packages.${system}.eif-init
+                , nsmKo      # string - path the nitro kernel module
+                , entrypoint # string - command to execute after encave boot - this is the path to your entrypoint binary inside rootfs)
+                , env        # string - environment variables to pass to the entrypoint)
+                , rootfs     # path   - the root filesystem
+                }: [
+                  (lib.mkSysRamdisk { inherit init nsmKo; })
+                  (lib.mkUserRamdisk { inherit entrypoint env rootfs; })
+                ];
 
               /**
                * Assembles an initramfs archive from a compiled init binary and a compiled Nitro kernel module.
@@ -56,15 +84,15 @@
                */
               mkSysRamdisk =
                 { name ? "bootstrap-initramfs"
-                , init ? packages.eif-init    # path (derivation)
-                , nsmKo                       # path (derivation)
+                , init ? self.packages.${system}.eif-init # path (derivation)
+                , nsmKo ? null                                   # path (derivation)
                 }:
                 lib.mkCpioArchive {
                   inherit name;
                   src = pkgs.runCommand "${name}-fs" { } ''
                     mkdir -p  $out/dev
-                    cp ${nsmKo} $out
-                    cp ${init} $out
+                    ${if nsmKo == null then "" else "cp ${nsmKo} $out/nsm.ko"}
+                    cp ${init} $out/init
                   '';
                 };
 
@@ -119,31 +147,30 @@
                *  - PCRs in derivation/pcr.json 
                */
               mkEif =
-                { name ? "${name}-linux-${arch}-${version}.eif"
+                { name ? "image-linux-${arch}-${version}-eif"
                 , version ? "0.1-dev"
                 , ramdisks           # list[path] of ramdisks to use for boot. See mkUserRamdisk and mkSysRamdisk
                 , kernel             # path (derivation) to compiled kernel binary
                 , kernelConfig       # path (derivation) to kernel config file
                 , cmdline ? "reboot=k panic=30 pci=off nomodules console=ttyS0 random.trust_cpu=on root=/dev/ram0" # string
                 , arch ? sysPrefix   # string - <"aarch64" | "x86_64"> architecture to build EIF for. Defaults to current system's.
-                }: pkgs.stdenv.mkDerivation {
+                }: pkgs.stdenv.mkDerivation rec {
                   inherit name version;
 
                   buildInputs = [ packages.eif-cli pkgs.jq ];
                   unpackPhase = ":"; # nothing to unpack 
-                  buildPhase =
-                    let
-                      ramdisksArgs = with pkgs.lib; concatStrings (map (ramdisk: "--ramdisk ${ramdisk} ") ramdisks);
-                    in
-                    ''
-                      eif=${packages.eif-cli}/bin/eif-cli
+                  eif = "${packages.eif-cli}/bin/eif-cli";
+                  ramdisksArgs = with pkgs.lib; concatStrings (map (ramdisk: "--ramdisk ${ramdisk} ") ramdisks);
 
-                      echo "Kernel:            ${kernel}"
-                      echo "Kernel config:     ${kernelConfig}"
-                      echo "cmdline:           ${cmdline}"
-                      echo "ramdisks:          ${pkgs.lib.concatStrings ramdisks}"
-                      $eif --sha384 --arch ${arch} --kernel ${kernel} --kernel_config ${kernelConfig} --cmdline "${cmdline}" ${ramdisksArgs} --name ${name} --version ${version} --output image.eif >> log.txt
-                    '';
+                  buildPhase = ''
+                    eif=${packages.eif-cli}/bin/eif-cli
+
+                    echo "Kernel:            ${kernel}"
+                    echo "Kernel config:     ${kernelConfig}"
+                    echo "cmdline:           ${cmdline}"
+                    echo "ramdisks:          ${pkgs.lib.concatStrings ramdisks}"
+                    ${eif} --sha384 --arch ${arch} --kernel ${kernel} --kernel_config ${kernelConfig} --cmdline "${cmdline}" ${ramdisksArgs} --name ${name} --version ${version} --output image.eif >> log.txt;
+                  '';
 
                   installPhase = ''
                     mkdir -p $out
@@ -155,6 +182,41 @@
                     # show PCRs in nix build logs
                     jq < $out/pcr.json
                   '';
+                };
+              inherit pkgs;
+
+              buildEif =
+                { name ? "image"
+                , version ? "0.1-dev"
+                , kernel # path (derivation) to compiled kernel binary
+                , kernelConfig       # path (derivation) to kernel config file
+                , cmdline ? "reboot=k panic=30 pci=off nomodules console=ttyS0 random.trust_cpu=on root=/dev/ram0" # string
+                , arch ? sysPrefix   # string - <"aarch64" | "x86_64"> architecture to build EIF for. Defaults to current system's.
+                  #  if you change this also set `kernel`
+                , copyToRoot
+                , entrypoint
+                , nsmKo ? null
+                , init ? self.crossPackages.${system}."${arch}-linux".eif-init + "/bin/init"
+                , env ? ""
+                }:
+                let
+                  nixStoreFrom = rootPath: pkgs.runCommandNoCC "pack-closure" { } ''
+                    mkdir -p $out/nix/store
+                    PATHS=$(cat ${pkgs.closureInfo { rootPaths = [ rootPath ] ; }}/store-paths)
+                    for p in $PATHS; do
+                      cp -r $p $out/nix/store
+                    done
+                    cp -r ${rootPath}/* $out
+                  '';
+                  rootfs = nixStoreFrom copyToRoot;
+                in
+                lib.mkEif {
+                  inherit kernel kernelConfig cmdline arch;
+
+                  ramdisks = [
+                    (lib.mkSysRamdisk { inherit init nsmKo; })
+                    (lib.mkUserRamdisk { inherit entrypoint env rootfs; })
+                  ];
                 };
 
 
@@ -224,11 +286,36 @@
               cargoLock.lockFile = src + "/Cargo.lock";
             };
 
+            /*
+             * Takes the system that you would like to compile for,
+             * and returns an attribute set with some packages cross-compiled for that system.
+             * 
+             * Returns normal, non-cross-compiled packages when system == crossSystem.
+             * 
+             * For example:
+             * 
+             * `init-for-x86 = (nitro.crossCompile "x86_64-linux").eif-init;`
+             * 
+             * Note it is currently not possible to compile init.c and the Kernel on darwin.
+             */
+            crossCompile = crossSystem:
+              let crossPkgs = if (system == crossSystem) then pkgs else import nixpkgs { localSystem = system; inherit crossSystem; }; in
+              {
+                eif-init = crossPkgs.callPackage ./init { };
+              };
+
+            crossPackages = {
+              x86_64-linux = crossCompile "x86_64-linux";
+              aarch64-linux = crossCompile "aarch64-linux";
+            };
+
+
+
             checks = {
               # make sure we can build the eif-cli
               inherit (packages) eif-cli;
 
-              # build a simple (non-bootable) EIF image for ARM64 as part of checks
+              # build a simple (non-bootable) EIF image for x86-64 as part of checks
               test-make-eif = lib.mkEif {
                 arch = "x86_64";
                 name = "test";
@@ -267,20 +354,11 @@
           pkgs = nixpkgs.legacyPackages."${system}";
         in
         rec {
-          # init.c, compiled and statically linked from https://github.com/aws/aws-nitro-enclaves-sdk-bootstrap
-          packages.eif-init = pkgs.stdenv.mkDerivation {
-            name = "eif-init";
-            src = (pkgs.fetchFromGitHub {
-              owner = "aws";
-              repo = "aws-nitro-enclaves-sdk-bootstrap";
-              rev = "746ec5d";
-              sha256 = "sha256-KtO/pNYI5uvXrVYZszES6Z0ShkDgORulMxBWWoiA+tg=";
-            }) + "/init"; # we just need the subfolder of this repo
 
-            nativeBuildInputs = [ pkgs.glibc.static ];
-            buildPhase = "make";
-            installPhase = "mkdir -p $out && cp -r ./init $out/";
-          };
+          /*
+             * init.c, compiled and statically linked from https://github.com/aws/aws-nitro-enclaves-sdk-bootstrap
+             */
+          packages.eif-init = self.crossPackages.${system}.${system}.eif-init;
 
           checks = {
             # make sure we can build init.c
