@@ -161,18 +161,16 @@
                   unpackPhase = ":"; # nothing to unpack 
                   eif = "${packages.eif-cli}/bin/eif-cli";
                   ramdisksArgs = with pkgs.lib; concatStrings (map (ramdisk: "--ramdisk ${ramdisk} ") ramdisks);
-                  cmd = ''${eif} --sha384 --arch ${arch} --kernel ${kernel} --kernel_config ${kernelConfig} --cmdline "${cmdline}" ${ramdisksArgs} --name ${name} --version ${version} --output image.eif >> log.txt'';
-                  buildPhase =
-                    ''
-                      eif=${packages.eif-cli}/bin/eif-cli
 
-                      echo "Kernel:            ${kernel}"
-                      echo "Kernel config:     ${kernelConfig}"
-                      echo "cmdline:           ${cmdline}"
-                      echo "ramdisks:          ${pkgs.lib.concatStrings ramdisks}"
-                      echo Command is '${cmd}'
-                      ${cmd}
-                    '';
+                  buildPhase = ''
+                    eif=${packages.eif-cli}/bin/eif-cli
+
+                    echo "Kernel:            ${kernel}"
+                    echo "Kernel config:     ${kernelConfig}"
+                    echo "cmdline:           ${cmdline}"
+                    echo "ramdisks:          ${pkgs.lib.concatStrings ramdisks}"
+                    ${eif} --sha384 --arch ${arch} --kernel ${kernel} --kernel_config ${kernelConfig} --cmdline "${cmdline}" ${ramdisksArgs} --name ${name} --version ${version} --output image.eif >> log.txt;
+                  '';
 
                   installPhase = ''
                     mkdir -p $out
