@@ -15,7 +15,7 @@ let
     done
   '';
   arch = stdenv.hostPlatform.uname.processor;
-  kernel = linux_6_8.overrode;
+  kernel = linux_6_8;
 in
 nitro.buildEif {
   kernel = kernel + (if arch == "aarch64" then "/Image" else "/bzImage");
