@@ -147,7 +147,7 @@
                *  - PCRs in derivation/pcr.json 
                */
               mkEif =
-                { name ? "$imae-linux-${arch}-${version}-eif"
+                { name ? "image-linux-${arch}-${version}-eif"
                 , version ? "0.1-dev"
                 , ramdisks           # list[path] of ramdisks to use for boot. See mkUserRamdisk and mkSysRamdisk
                 , kernel             # path (derivation) to compiled kernel binary
