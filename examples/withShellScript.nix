@@ -1,7 +1,7 @@
 { buildEnv
 , writeShellScriptBin
 , busybox
-, nitro # this should be nitro-util.lib.${system}
+, nitro # when you call this function pass `nitro-util.lib.${system}` here
 , stdenv
 }:
 let
