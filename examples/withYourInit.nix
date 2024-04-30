@@ -3,6 +3,8 @@
 , busybox
 , nitro # when you call this function pass `nitro-util.lib.${system}` here
 , stdenv
+, glibc
+, fetchFromGitHub
 }:
 let
   myScript = writeShellScriptBin "hello" ''
@@ -31,6 +33,23 @@ nitro.buildEif {
     paths = [ myScript ];
     pathsToLink = [ "/bin" ];
   };
+
+  # This example uses AWS' init.c from
+  # https://github.com/aws/aws-nitro-enclaves-sdk-bootstrap/tree/main/init
+  init = stdenv.mkDerivation {
+    name = "eif-init";
+    src = (fetchFromGitHub {
+      owner = "aws";
+      repo = "aws-nitro-enclaves-sdk-bootstrap";
+      rev = "746ec5d";
+      sha256 = "sha256-KtO/pNYI5uvXrVYZszES6Z0ShkDgORulMxBWWoiA+tg=";
+    }) + "/init"; # we just need the subfolder of this repo
+
+    nativeBuildInputs = [ glibc.static ];
+    buildPhase = "make";
+    installPhase = "cp -r ./init $out";
+  };
+
 
   entrypoint = "/bin/hello";
   env = "";

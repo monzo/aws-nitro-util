@@ -14,13 +14,16 @@
     in
     {
       packages = {
+
         shellScriptEif = pkgs.callPackage ./withShellScript.nix {
           inherit nitro;
         };
 
-        bringYourOwnKernelEif = pkgs.callPackage ./bringYourOwnKernel.nix {
+
+        yourOwnInitEif = pkgs.callPackage ./withYourInit.nix {
           inherit nitro;
         };
+
       };
     }));
 }
