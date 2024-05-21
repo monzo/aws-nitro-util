@@ -203,8 +203,9 @@
                 , cmdline ? "reboot=k panic=30 pci=off nomodules console=ttyS0 random.trust_cpu=on root=/dev/ram0" # string
                 , arch ? sysPrefix   # string - <"aarch64" | "x86_64"> architecture to build EIF for. Defaults to current system's.
                   #  if you change this also set `kernel`
-                , copyToRoot    # path - contents, along with their dependencies, that get copied over to the root filesystem
-                , rootfs ? (nixStoreFrom copyToRoot) # path - the root filesystem, defaults to the closure provided by copyToRoot (use that if unsure)
+                , copyToRoot ? null    # path - contents, along with their dependencies, that get copied over to the root filesystem
+                  # path - the root filesystem, defaults to the closure provided by copyToRoot (use that if unsure)
+                , rootfs ? if (pkgs.lib.asserts.assertMsg (copyToRoot == null) "expected one of copyToRoot or rootfs to be set") then (nixStoreFrom copyToRoot) else null
                 , entrypoint
                 , nsmKo ? null
                 , init ? self.crossPackages.${system}."${arch}-linux".eif-init + "/bin/init"

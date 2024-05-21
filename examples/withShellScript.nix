@@ -26,12 +26,14 @@ nitro.buildEif {
 
   nsmKo = nitro.blobs.aarch64.nsmKo;
 
-  copyToRoot = buildEnv {
-    name = "image-root";
-    paths = [ myScript ];
-    pathsToLink = [ "/bin" ];
-  };
+  # copyToRoot = buildEnv {
+  #   name = "image-root";
+  #   paths = [ myScript ];
+  #   pathsToLink = [ "/bin" ];
+  # };
 
-  entrypoint = "/bin/hello";
+  rootfs = myScript + "bin/hello";
+
+  entrypoint = "hello";
   env = "";
 }
