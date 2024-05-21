@@ -13,11 +13,14 @@ let
       sleep 3;
     done
   '';
-  arch = stdenv.hostPlatform.uname.processor;
+  arch = "x86_64";
 in
 nitro.buildEif {
+  inherit arch;
   kernel = nitro.blobs.${arch}.kernel;
   kernelConfig = nitro.blobs.${arch}.kernelConfig;
+  init = nitro.blobs.${arch}.init;
+
 
   name = "eif-hello-world";
 
