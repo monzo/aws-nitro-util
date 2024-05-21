@@ -6,34 +6,30 @@
 }:
 let
   myScript = writeShellScriptBin "hello" ''
-
+    export PATH="$PATH:${busybox}/bin"
     while true;
     do
       echo "hello there!";
       sleep 3;
     done
   '';
-  arch = "x86_64";
+  arch = stdenv.hostPlatform.uname.processor;
 in
 nitro.buildEif {
   inherit arch;
   kernel = nitro.blobs.${arch}.kernel;
   kernelConfig = nitro.blobs.${arch}.kernelConfig;
-  init = nitro.blobs.${arch}.init;
-
 
   name = "eif-hello-world";
 
   nsmKo = nitro.blobs.aarch64.nsmKo;
 
-  # copyToRoot = buildEnv {
-  #   name = "image-root";
-  #   paths = [ myScript ];
-  #   pathsToLink = [ "/bin" ];
-  # };
+  copyToRoot = buildEnv {
+    name = "image-root";
+    paths = [ myScript ];
+    pathsToLink = [ "/bin" ];
+  };
 
-  rootfs = myScript + "bin/hello";
-
-  entrypoint = "hello";
+  entrypoint = "/bin/hello";
   env = "";
 }

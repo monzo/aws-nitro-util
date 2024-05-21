@@ -22,7 +22,6 @@
             pkgs = nixpkgs.legacyPackages."${system}";
             # returns 'aarch64' from 'aarch64-linux'
             sysPrefix = pkgs.stdenv.hostPlatform.uname.processor;
-
           in
           rec {
             lib = {
