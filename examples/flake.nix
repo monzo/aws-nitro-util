@@ -2,7 +2,7 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-23.11";
 
-    nitro-util.url = "github:monzo/aws-nitro-util/kernel";
+    nitro-util.url = "github:monzo/aws-nitro-util";
     nitro-util.inputs.nixpkgs.follows = "nixpkgs";
 
     flake-utils.url = "github:numtide/flake-utils";

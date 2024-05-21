@@ -19,6 +19,7 @@ let
   arch = stdenv.hostPlatform.uname.processor;
 in
 nitro.buildEif {
+  inherit arch;
   kernel = nitro.blobs.${arch}.kernel;
   kernelConfig = nitro.blobs.${arch}.kernelConfig;
 
