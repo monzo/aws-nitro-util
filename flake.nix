@@ -205,7 +205,7 @@
                   #  if you change this also set `kernel`
                 , copyToRoot ? null    # path - contents, along with their dependencies, that get copied over to the root filesystem
                   # path - the root filesystem, defaults to the closure provided by copyToRoot (use that if unsure)
-                , rootfs ? if (pkgs.lib.asserts.assertMsg (copyToRoot == null) "expected one of copyToRoot or rootfs to be set") then (nixStoreFrom copyToRoot) else null
+                , rootfs ? if (pkgs.lib.asserts.assertMsg (copyToRoot != null) "expected one of copyToRoot or rootfs to be set") then (nixStoreFrom copyToRoot) else null
                 , entrypoint
                 , nsmKo ? null
                 , init ? self.crossPackages.${system}."${arch}-linux".eif-init + "/bin/init"
