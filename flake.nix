@@ -23,15 +23,6 @@
             # returns 'aarch64' from 'aarch64-linux'
             sysPrefix = pkgs.stdenv.hostPlatform.uname.processor;
 
-            # returns a derivation with rootPath and all its dependencies, copied over
-            nixStoreFrom = rootPath: pkgs.runCommandNoCC "pack-closure" { } ''
-              mkdir -p $out/nix/store
-              PATHS=$(cat ${pkgs.closureInfo { rootPaths = [ rootPath ] ; }}/store-paths)
-              for p in $PATHS; do
-                cp -r $p $out/nix/store
-              done
-              cp -r ${rootPath}/* $out
-            '';
           in
           rec {
             lib = {
@@ -203,16 +194,24 @@
                 , cmdline ? "reboot=k panic=30 pci=off nomodules console=ttyS0 random.trust_cpu=on root=/dev/ram0" # string
                 , arch ? sysPrefix   # string - <"aarch64" | "x86_64"> architecture to build EIF for. Defaults to current system's.
                   #  if you change this also set `kernel`
-                , copyToRoot ? null    # path - contents, along with their dependencies, that get copied over to the root filesystem
-                  # path - the root filesystem, defaults to the closure provided by copyToRoot (use that if unsure)
-                , rootfs ? if (pkgs.lib.asserts.assertMsg (copyToRoot != null) "expected one of copyToRoot or rootfs to be set") then (nixStoreFrom copyToRoot) else null
+                , copyToRoot         # path - contents that get copied over to the root filesystem
+                , copyToRootWithClosure ? true   # bool - whether to also copy copyToRoot's depdencies over
                 , entrypoint
                 , nsmKo ? null
                 , init ? self.crossPackages.${system}."${arch}-linux".eif-init + "/bin/init"
                 , env ? ""
                 }:
                 let
-                  rootfs = nixStoreFrom copyToRoot;
+                  # returns a derivation with rootPath and all its dependencies, copied over
+                  nixStoreFrom = rootPath: pkgs.runCommandNoCC "pack-closure" { } ''
+                    mkdir -p $out/nix/store
+                    PATHS=$(cat ${pkgs.closureInfo { rootPaths = [ rootPath ] ; }}/store-paths)
+                    for p in $PATHS; do
+                      cp -r $p $out/nix/store
+                    done
+                    cp -r ${rootPath}/* $out
+                  '';
+                  rootfs = if copyToRootWithClosure then nixStoreFrom copyToRoot else copyToRoot;
                 in
                 lib.mkEif {
                   inherit kernel kernelConfig cmdline arch;
