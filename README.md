@@ -15,7 +15,7 @@ The tradeoffs between using this repo and AWS' `nitro-cli` are:
 | Feature | `nitro-cli build-enclave` | monzo/aws-nitro-util |
 |---------|-----------|----------------------|
 | EIF userspace input | Docker container | plain files, including nix packages and unpacked OCI images
-| EIF bootstrap input | pre-compiled kernel binary provided by AWS | Bring Your Own Kernel (but you can still choose AWS' if you choose not to compile your own)
+| EIF bootstrap input | pre-compiled kernel binary provided by AWS | use pre-compiled kernel by AWS or any other valid Kernel (for example see [this PR](https://github.com/aws/aws-nitro-enclaves-sdk-bootstrap/pull/22))
 | dependencies | Docker, linuxkit fork, [aws/aws-nitro-enclaves-image-format](https://github.com/aws/aws-nitro-enclaves-image-format/) | Nix, [aws/aws-nitro-enclaves-image-format](https://github.com/aws/aws-nitro-enclaves-image-format/)
 | Source-reproducible | no, uses pre-compiled blobs provided by AWS | yes, can be built entirely from source
 | Bit-by-bit reproducible EIFs | no, EIFs are timestamped | yes, building the same EIF will result in the same SHA256
@@ -23,7 +23,9 @@ The tradeoffs between using this repo and AWS' `nitro-cli` are:
 | OS* | [Amazon Linux](https://docs.aws.amazon.com/enclaves/latest/user/nitro-enclave-cli-install.html) unless you [compile `nitro-cli` from source](https://github.com/aws/aws-nitro-enclaves-cli/tree/main/docs) for other Linux. No MacOS. | any Linux or MacOS with a Nix installation
 
 
-(*): OS for building EIFs. Note that even if you make an EIF on a Mac, it can still only run on Linux.
+(*): OS for building EIFs. Note that 
+- to make EIFs on a Mac, you have to be able to cross-compile the userspace binaries from Darwin to Linux
+- even if you make an EIF on a Mac, it can still only run on Linux.
 
 ## Examples
 
@@ -44,7 +46,7 @@ Flake quick start, to build an enclave with nixpkgs' `hello` :
             name = "eif-hello-world";
 
             # use AWS' nitro-cli binary blobs
-            inherit (nitro.blobs.${eifArch}) kernel kernelConfig init nsmKo;
+            inherit (nitro.blobs.${eifArch}) kernel kernelConfig nsmKo;
 			
             arch = eifArch;
 
