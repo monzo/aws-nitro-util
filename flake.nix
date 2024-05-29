@@ -186,7 +186,7 @@
               inherit pkgs;
 
               buildEif =
-                { name ? "image"
+                { name ? "image-linux-${arch}-${version}-eif"
                 , version ? "0.1-dev"
                 , kernel # path (derivation) to compiled kernel binary
                 , kernelConfig       # path (derivation) to kernel config file
@@ -213,7 +213,7 @@
                   rootfs = if copyToRootWithClosure then nixStoreFrom copyToRoot else copyToRoot;
                 in
                 lib.mkEif {
-                  inherit kernel kernelConfig cmdline arch;
+                  inherit kernel kernelConfig cmdline arch name version;
 
                   ramdisks = [
                     (lib.mkSysRamdisk { inherit init nsmKo; })
