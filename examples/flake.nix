@@ -1,6 +1,6 @@
 {
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-23.11";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
     nitro-util.url = "github:monzo/aws-nitro-util";
     nitro-util.inputs.nixpkgs.follows = "nixpkgs";
@@ -21,6 +21,10 @@
 
 
         yourOwnInitEif = pkgs.callPackage ./withYourInit.nix {
+          inherit nitro;
+        };
+
+        yourOwnKernelEif = pkgs.callPackage ./bringYourOwnKernel.nix {
           inherit nitro;
         };
 
