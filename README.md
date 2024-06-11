@@ -15,7 +15,7 @@ The tradeoffs between using this repo and AWS' `nitro-cli` are:
 | Feature | `nitro-cli build-enclave` | monzo/aws-nitro-util |
 |---------|-----------|----------------------|
 | EIF userspace input | Docker container | plain files, including nix packages and unpacked OCI images
-| EIF bootstrap input | pre-compiled kernel binary provided by AWS | use pre-compiled kernel by AWS or any other valid Kernel (for example see [this PR](https://github.com/aws/aws-nitro-enclaves-sdk-bootstrap/pull/22))
+| EIF bootstrap input | pre-compiled kernel binary provided by AWS | use pre-compiled kernel by AWS or bring your own kernel (see [example](./examples/README.md))
 | dependencies | Docker, linuxkit fork, [aws/aws-nitro-enclaves-image-format](https://github.com/aws/aws-nitro-enclaves-image-format/) | Nix, [aws/aws-nitro-enclaves-image-format](https://github.com/aws/aws-nitro-enclaves-image-format/)
 | Source-reproducible | no, uses pre-compiled blobs provided by AWS | yes, can be built entirely from source
 | Bit-by-bit reproducible EIFs | no, EIFs are timestamped | yes, building the same EIF will result in the same SHA256
