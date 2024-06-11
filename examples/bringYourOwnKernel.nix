@@ -36,7 +36,7 @@ nitro.buildEif {
   name = "eif-hello-world";
 
   # do not include a nsm.ko kernel module, as it is
-  # alerady present in Kernel 6.8+
+  # already present in Kernel 6.8+
   nsmKo = null;
 
   copyToRoot = buildEnv {
