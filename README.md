@@ -38,9 +38,10 @@ Flake quick start, to build an enclave with nixpkgs' `hello` :
     nitro-util.inputs.nixpkgs.follows = "nixpkgs";
   };
   outputs = { self, nixpkgs, flake-utils, nitro-util, ... }:
-    let system = x86_64-linux; 
+    let system = "x86_64-linux";
         nitro = nitro-util.lib.${system};
         eifArch = "x86_64";
+	    pkgs = nixpkgs.legacyPackages."${system}";
     in {
         packages.${system}.eif-hello-world = nitro.buildEif {
             name = "eif-hello-world";
@@ -51,12 +52,12 @@ Flake quick start, to build an enclave with nixpkgs' `hello` :
             arch = eifArch;
 
             entrypoint = "/bin/hello";
-			env = ""; 
-			copyToRoot = pkgs.buildEnv {
-				name = "image-root";
-				paths = [ pkgs.hello ];
-				pathsToLink = [ "/bin" ];
-			};
+            env = "";
+            copyToRoot = pkgs.buildEnv {
+                name = "image-root";
+                paths = [ pkgs.hello ];
+                pathsToLink = [ "/bin" ];
+            };
         };
     };
 }
