@@ -12,7 +12,7 @@ let
 
     while true;
     do
-      echo "hello there!";
+      echo "hello there $1 !";
       sleep 3;
     done
   '';
@@ -33,6 +33,10 @@ nitro.buildEif {
     pathsToLink = [ "/bin" ];
   };
 
-  entrypoint = "/bin/hello";
+  entrypoint = ''
+    /bin/hello
+    there
+  '';
+
   env = "";
 }

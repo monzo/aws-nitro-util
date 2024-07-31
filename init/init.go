@@ -368,7 +368,7 @@ func main() {
 		die("failed to init cgroups", err)
 	}
 
-	pid, err := launch(cmd[0], cmd[1:], env)
+	pid, err := launch(cmd[0], cmd, env)
 
 	if err != nil {
 		die("failed to launch", err)
