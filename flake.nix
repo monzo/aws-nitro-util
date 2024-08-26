@@ -1,13 +1,6 @@
 ### Nix flake for building nitro CLI utilities
-# 
-# This is linux-only, if you are using MacOS
-#  - if you have nix-darwin installed (see https://daiderd.com/nix-darwin/manual/index.html#opt-nix.linux-builder.enable )
-#    - run nix build .#packages.aarch64-linux.eif_build
-#  - if you don't have Nix but have Docker (see Dockerfile):
-#     - docker build --platform=linux/aarch64 -t nix-tmp . && docker run -it -t nix-tmp
-#
 {
-  description = "Builds binaries for key exchange scripts deterministically, cross-platform";
+  description = "Builds AWS Nitro Enclave Image Format files (EIFs) deterministically, cross-platform";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
