@@ -153,7 +153,7 @@
                   buildInputs = [ packages.eif_build pkgs.jq ];
                   unpackPhase = ":"; # nothing to unpack 
                   ramdisksArgs = with pkgs.lib; concatStrings (map (ramdisk: "--ramdisk ${ramdisk} ") ramdisks);
-                  metadataArgs = "--build-tool='monzo-aws-nitro-util'";
+                  metadataArgs = "--build-tool='monzo-aws-nitro-util' --build-time='1970-01-01T00:00:00.000000+00:00'";
 
                   buildPhase = ''
                     echo "Kernel:            ${kernel}"

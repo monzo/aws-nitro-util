@@ -11,7 +11,7 @@
 #  USAGE:
 #      eif_build [OPTIONS] --kernel <FILE> --cmdline <String> --output <FILE> --ramdisk <FILE>
 rustPlatform.buildRustPackage {
-  name = "eif-cli";
+  name = "eif_build";
   nativeBuildInputs = [ pkg-config ];
   buildInputs = [ openssl ];
   src = fetchFromGitHub {
