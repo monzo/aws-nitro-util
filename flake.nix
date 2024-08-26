@@ -2,7 +2,7 @@
 # 
 # This is linux-only, if you are using MacOS
 #  - if you have nix-darwin installed (see https://daiderd.com/nix-darwin/manual/index.html#opt-nix.linux-builder.enable )
-#    - run nix build .#packages.aarch64-linux.eif-cli
+#    - run nix build .#packages.aarch64-linux.eif_build
 #  - if you don't have Nix but have Docker (see Dockerfile):
 #     - docker build --platform=linux/aarch64 -t nix-tmp . && docker run -it -t nix-tmp
 #
@@ -140,7 +140,7 @@
 
 
               /*
-               * Uses eif-cli to build an image. See packages.eif-cli. Note that only Linux EIFs can be made.
+               * Uses eif_build to build an image. See packages.eif_build. Note that only Linux EIFs can be made.
                * 
                * Returns a derivation containing:
                *  - image in derivation/image.eif
@@ -157,19 +157,26 @@
                 }: pkgs.stdenv.mkDerivation rec {
                   inherit name version;
 
-                  buildInputs = [ packages.eif-cli pkgs.jq ];
+                  buildInputs = [ packages.eif_build pkgs.jq ];
                   unpackPhase = ":"; # nothing to unpack 
-                  eif = "${packages.eif-cli}/bin/eif-cli";
                   ramdisksArgs = with pkgs.lib; concatStrings (map (ramdisk: "--ramdisk ${ramdisk} ") ramdisks);
+                  metadataArgs = "--build-tool='monzo-aws-nitro-util'";
 
                   buildPhase = ''
-                    eif=${packages.eif-cli}/bin/eif-cli
-
                     echo "Kernel:            ${kernel}"
-                    echo "Kernel config:     ${kernelConfig}"
+                    echo "Kernel config:      ${kernelConfig}"
                     echo "cmdline:           ${cmdline}"
                     echo "ramdisks:          ${pkgs.lib.concatStrings ramdisks}"
-                    ${eif} --sha384 --arch ${arch} --kernel ${kernel} --kernel_config ${kernelConfig} --cmdline "${cmdline}" ${ramdisksArgs} --name ${name} --version ${version} --output image.eif >> log.txt;
+                    eif_build \
+                      --arch ${arch} \
+                      --kernel ${kernel} \
+                      --kernel_config ${kernelConfig} \
+                      --cmdline "${cmdline}" \
+                      ${ramdisksArgs} \
+                      --name ${name} \
+                      --version ${version} \
+                      ${metadataArgs} \
+                      --output image.eif >> log.txt;
                   '';
 
                   installPhase = ''
@@ -178,7 +185,7 @@
                     # save logs
                     cp log.txt $out
                     # extract PCRs from logs
-                    cat log.txt | tail -1 >> $out/pcr.json
+                    cat log.txt | tail -6 >> $out/pcr.json
                     # show PCRs in nix build logs
                     jq < $out/pcr.json
                   '';
@@ -277,18 +284,9 @@
                 sha256 = hashes.${system};
               };
 
-            # A CLI to build eif images, a thin wrapper around AWS' library
+            # A CLI to build eif images, provided by AWS in
             # https://github.com/aws/aws-nitro-enclaves-image-format
-            # eif-cli [OPTIONS] --kernel <FILE> --kernel_config <FILE> --cmdline <String> --output <FILE> --ramdisk <FILE>
-            packages.eif-cli = pkgs.rustPlatform.buildRustPackage rec {
-              name = "eif-cli";
-              nativeBuildInputs = [ pkgs.pkg-config ];
-              buildInputs = [ pkgs.openssl ];
-              src = ./eif-cli;
-              cargoLock.lockFile = src + "/Cargo.lock";
-            };
-
-            packages.eif_build = pkgs.callPackage ./eif_build/package.nix {};
+            packages.eif_build = pkgs.callPackage ./eif_build/package.nix { };
 
             /*
              * Takes the system that you would like to compile for,
@@ -316,8 +314,8 @@
 
 
             checks = {
-              # make sure we can build the eif-cli
-              inherit (packages) eif-cli;
+              # make sure we can build the eif_build CLI
+              inherit (packages) eif_build;
 
               # build a simple (non-bootable) EIF image for x86-64 as part of checks
               test-make-eif = lib.mkEif {
