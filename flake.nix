@@ -288,6 +288,8 @@
               cargoLock.lockFile = src + "/Cargo.lock";
             };
 
+            packages.eif_build = pkgs.callPackage ./eif_build/package.nix {};
+
             /*
              * Takes the system that you would like to compile for,
              * and returns an attribute set with some packages cross-compiled for that system.
