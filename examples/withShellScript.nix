@@ -6,8 +6,6 @@
 }:
 let
   myScript = writeShellScriptBin "hello" ''
-    # note busybox can be used for building EIFs but only on Linux
-    # so remove this line if you are building an EIF on MacOS
     export PATH="$PATH:${busybox}/bin"
 
     while true;
