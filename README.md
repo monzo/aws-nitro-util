@@ -12,16 +12,16 @@ We recommend [this excellent blog post](https://blog.trailofbits.com/2024/02/16/
 
 
 The tradeoffs between using this repo and AWS' `nitro-cli` are:
-| Feature | `nitro-cli build-enclave` | monzo/aws-nitro-util |
-|---------|-----------|----------------------|
-| EIF userspace input | Docker container | plain files, including nix packages and unpacked OCI images
-| EIF bootstrap input | pre-compiled kernel binary provided by AWS | use pre-compiled kernel by AWS or bring your own kernel (see [example](./examples/README.md))
-| dependencies | Docker, linuxkit fork, [aws/aws-nitro-enclaves-image-format](https://github.com/aws/aws-nitro-enclaves-image-format/) | Nix, [aws/aws-nitro-enclaves-image-format](https://github.com/aws/aws-nitro-enclaves-image-format/)
-| Source-reproducible | no, uses pre-compiled blobs provided by AWS | yes, can be built entirely from source
-| Bit-by-bit reproducible EIFs | no, EIFs are timestamped | yes, building the same EIF will result in the same SHA256
-| cross-architecture EIFs | yes, if you provide a container for the right architecture | yes, if you provide binaries for the right architecture
-| OS* | [Amazon Linux](https://docs.aws.amazon.com/enclaves/latest/user/nitro-enclave-cli-install.html) unless you [compile `nitro-cli` from source](https://github.com/aws/aws-nitro-enclaves-cli/tree/main/docs) for other Linux. No MacOS. | any Linux or MacOS with a Nix installation
 
+| Feature                      | `nitro-cli build-enclave`                                                                                                                                                                                                             | monzo/aws-nitro-util                                                                                |
+|------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------|
+| EIF userspace input          | Docker container                                                                                                                                                                                                                      | plain files, including nix packages and unpacked OCI images                                         |
+| EIF bootstrap input          | pre-compiled kernel binary provided by AWS                                                                                                                                                                                            | use pre-compiled kernel by AWS or bring your own kernel (see [example](./examples/README.md))       |
+| dependencies                 | Docker, linuxkit fork, [aws/aws-nitro-enclaves-image-format](https://github.com/aws/aws-nitro-enclaves-image-format/)                                                                                                                 | Nix, [aws/aws-nitro-enclaves-image-format](https://github.com/aws/aws-nitro-enclaves-image-format/) |
+| Source-reproducible          | no, uses pre-compiled blobs provided by AWS                                                                                                                                                                                           | yes, can be built entirely from source                                                              |
+| Bit-by-bit reproducible EIFs | no, EIFs are timestamped                                                                                                                                                                                                              | yes, building the same EIF will result in the same SHA256                                           |
+| cross-architecture EIFs      | yes, if you provide a container for the right architecture                                                                                                                                                                            | yes, if you provide binaries for the right architecture                                             |
+| OS*                          | [Amazon Linux](https://docs.aws.amazon.com/enclaves/latest/user/nitro-enclave-cli-install.html) unless you [compile `nitro-cli` from source](https://github.com/aws/aws-nitro-enclaves-cli/tree/main/docs) for other Linux. No MacOS. | any Linux or MacOS with a Nix installation                                                          |
 
 (*): OS for building EIFs. Note that 
 - to make EIFs on a Mac, you have to be able to cross-compile the userspace binaries from Darwin to Linux
@@ -29,41 +29,7 @@ The tradeoffs between using this repo and AWS' `nitro-cli` are:
 
 ## Examples
 
-Flake quick start, to build an enclave with nixpkgs' `hello` :
-```nix
-{
-  inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    nitro-util.url = "github:/monzo/aws-nitro-util";
-    nitro-util.inputs.nixpkgs.follows = "nixpkgs";
-  };
-  outputs = { self, nixpkgs, flake-utils, nitro-util, ... }:
-    let system = "x86_64-linux";
-        nitro = nitro-util.lib.${system};
-        eifArch = "x86_64";
-	    pkgs = nixpkgs.legacyPackages."${system}";
-    in {
-        packages.${system}.eif-hello-world = nitro.buildEif {
-            name = "eif-hello-world";
-
-            # use AWS' nitro-cli binary blobs
-            inherit (nitro.blobs.${eifArch}) kernel kernelConfig nsmKo;
-			
-            arch = eifArch;
-
-            entrypoint = "/bin/hello";
-            env = "";
-            copyToRoot = pkgs.buildEnv {
-                name = "image-root";
-                paths = [ pkgs.hello ];
-                pathsToLink = [ "/bin" ];
-            };
-        };
-    };
-}
-```
-
-See more examples in [`examples/`](./examples/).
+You can find examples in [`examples/`](./examples/README.md).
 
 ## Design
 
@@ -96,7 +62,7 @@ graph TD
 		yourRepo("your source code \n or OCI image")
 	end
 	initBin("init \n compiled init.c \n (or bring your own)")
-	eifCli("📦 eif-cli \n in this repo")
+	eifCli("📦 eif_build CLI \n")
 	nsm("nsm.ko \n compiled Nitro \n kernel module \n (or bring your own)")
 
     subgraph PCR1
@@ -125,7 +91,7 @@ graph TD
 	nsm-->doSysInit
 	doSysInit ==> sysInit
 
-	eifFormatRepo ---> |pulled as \n build-time Rust \n cargo dependency|eifCli
+	eifFormatRepo ---> |compile \n from source|eifCli
 	eifCli -->doEif
 	kernel -->doEif
 	sysInit ==>doEif
