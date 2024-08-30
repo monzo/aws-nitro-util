@@ -8,7 +8,11 @@ You can think of it as an alternative to `nitro-cli build-enclave` for building 
 - give users complete control over their enclave images, providing additional options like BYOK (Bring Your Own Kernel)
 - easily build EIFs on systems other than Amazon Linux, including M1+ Macs (e.g, it's possible to build an x86_64 Linux EIF on an ARM Mac)
 
-We recommend [this excellent blog post](https://blog.trailofbits.com/2024/02/16/a-few-notes-on-aws-nitro-enclaves-images-and-attestation) to learn more about the EIF Nitro image format in general.
+
+> We wrote [a blog post](https://monzo.com/blog/securing-our-software-supply-chain-better-with-reproducible-builds-for)
+> about our motivation for building this tooling at Monzo. We recommend you read it if you use AWS Nitro Enclaves
+> and you are wondering why you might want to use it.
+> We also recommend [this other excellent blog post](https://blog.trailofbits.com/2024/02/16/a-few-notes-on-aws-nitro-enclaves-images-and-attestation) to learn more about the EIF Nitro image format in general.
 
 
 The tradeoffs between using this repo and AWS' `nitro-cli` are:
@@ -31,9 +35,11 @@ The tradeoffs between using this repo and AWS' `nitro-cli` are:
 
 You can find examples in [`examples/`](./examples/README.md).
 
+Note that you need to install [Nix](https://nixos.org/) and [enable flakes](https://nixos.wiki/wiki/Flakes) to use this repo.
+
 ## Design
 
-monzo/aws-nitro-util is made up of a small CLI that wraps  [aws/aws-nitro-enclaves-image-format](https://github.com/aws/aws-nitro-enclaves-image-format/) (which allows building an EIF from a specific file structure) and of Nix utilities to reproducibly build the CLI and its inputs.
+monzo/aws-nitro-util compiles a CLI from [aws/aws-nitro-enclaves-image-format](https://github.com/aws/aws-nitro-enclaves-image-format/) (which allows building an EIF from a specific file structure) and of Nix utilities to reproducibly build AWS' tooling, the EIF, and its dependencies.
 
 A typical EIF build would look like the following:
 
