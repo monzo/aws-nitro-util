@@ -6,6 +6,8 @@
 }:
 let
   myScript = writeShellScriptBin "hello" ''
+    # this will fail when compiling on MacOS
+    # see cross-compilation examples for alternatives
     export PATH="$PATH:${busybox}/bin"
 
     while true;
@@ -23,7 +25,7 @@ nitro.buildEif {
 
   name = "eif-hello-world";
 
-  nsmKo = nitro.blobs.aarch64.nsmKo;
+  nsmKo = nitro.blobs.${arch}.nsmKo;
 
   copyToRoot = buildEnv {
     name = "image-root";
