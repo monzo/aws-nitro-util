@@ -33,7 +33,7 @@ This can be any machine you can SSH into, including a VM.
 
 Then, for example, to compile EIFs natively for `x86_64-linux` on an ARM Mac:
 ```bash
-nix build '.#packages.x86_64-linux.shellScriptEif'
+nix build '.#packages.x86_64-linux-crossCompiledEif'
 ```
 
 Using remote builders makes builds simpler (because it is a linux x86 machine compiling linux x86 binaries) but requires setting
@@ -49,5 +49,5 @@ To cross-compile an EIF from your local system
 to `x86_64-linux`:
 
 ```bash
-nix build '.#x86_64-linux-shellScriptEif'
+nix build '.#x86_64-linux-crossCompiledEif'
 ```
