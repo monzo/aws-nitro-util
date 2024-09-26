@@ -44,14 +44,17 @@
         ]
       },
       "locked": {
-        "lastModified": 0,
-        "narHash": "sha256-fUj8BLx2V+pSHIs3pZtYfwmuHlxxUV/IVhnwSze5fZY=",
-        "path": "../",
-        "type": "path"
+        "lastModified": 1724920755,
+        "narHash": "sha256-TbHvAat+18FRbbz02of5MBeldPm1MN5B0iapR3T52VA=",
+        "owner": "monzo",
+        "repo": "aws-nitro-util",
+        "rev": "e0ef65c961b853a44bb47cbf06126a4acce29ae7",
+        "type": "github"
       },
       "original": {
-        "path": "../",
-        "type": "path"
+        "owner": "monzo",
+        "repo": "aws-nitro-util",
+        "type": "github"
       }
     },
     "nixpkgs": {

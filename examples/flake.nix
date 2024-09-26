@@ -2,7 +2,7 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
-    nitro-util.url = "path:../";
+    nitro-util.url = "github:monzo/aws-nitro-util";
     nitro-util.inputs.nixpkgs.follows = "nixpkgs";
 
     flake-utils.url = "github:numtide/flake-utils";
@@ -14,7 +14,7 @@
     in
     {
       packages = {
-
+        # the EIFs below will be for your machine's architecture
         shellScriptEif = pkgs.callPackage ./withShellScript.nix {
           inherit nitro;
         };
@@ -28,6 +28,25 @@
           inherit nitro;
         };
 
+        # the EIFs below will be for the architecture in the package name,
+        # even if you build from a different machine
+        x86_64-linux-crossCompiledEif =
+          let
+            crossArch = "x86_64";
+            crossPkgs = import nixpkgs { inherit system; crossSystem = "${crossArch}-linux"; };
+          in
+          crossPkgs.callPackage ./withCrossCompilation.nix {
+            inherit crossArch nitro;
+          };
+
+        aarch64-linux-crossCompiledEif =
+          let
+            crossArch = "aarch64";
+            crossPkgs = import nixpkgs { inherit system; crossSystem = "${crossArch}-linux"; };
+          in
+          crossPkgs.callPackage ./withCrossCompilation.nix {
+            inherit crossArch nitro;
+          };
       };
     }));
 }
