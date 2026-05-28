@@ -12,7 +12,16 @@
       (flake-utils.lib.eachDefaultSystem
         (system:
           let
-            pkgs = nixpkgs.legacyPackages."${system}";
+            # crates.io 403s curl's user-agent on their API download endpoint.
+            # Replace the old URL with the static CDN if present; no-op on newer nixpkgs that already have the fix.
+            # See https://github.com/rust-lang/crates.io/issues/13482
+            patchedNixpkgsSrc = nixpkgs.legacyPackages.${system}.runCommand "nixpkgs-patched" {} ''
+              cp -r ${nixpkgs} $out
+              chmod -R u+w $out
+              substituteInPlace $out/pkgs/build-support/rust/import-cargo-lock.nix \
+                --replace-quiet '"https://crates.io/api/v1/crates"' '"https://static.crates.io/crates"'
+            '';
+            pkgs = import patchedNixpkgsSrc { inherit system; };
             # returns 'aarch64' from 'aarch64-linux'
             sysPrefix = pkgs.stdenv.hostPlatform.uname.processor;
           in
