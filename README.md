@@ -37,6 +37,32 @@ You can find examples in [`examples/`](./examples/README.md).
 
 Note that you need to install [Nix](https://nixos.org/) and [enable flakes](https://nixos.wiki/wiki/Flakes) to use this repo.
 
+If your flake sets `nitro-util.inputs.nixpkgs.follows`, your nixpkgs must have rustc 1.94.1 or later, because `eif_build` needs it.
+
+## Signed EIFs
+
+This flake builds unsigned EIFs, so that the build stays bit-by-bit reproducible and no signing key goes into the Nix store.
+You can sign an EIF after the build, outside Nix, with a local key or an AWS KMS key.
+
+When you sign an EIF:
+- PCR0, PCR1 and PCR2 do not change, because the signature section is not part of them.
+- PCR8 is added. PCR8 = sha384(48 zero bytes || sha384(DER-encoded signing certificate)).
+- The signed `.eif` file is not bit-by-bit reproducible, because ECDSA signatures are randomised. Its PCRs are.
+
+`packages.<system>.signing-test-vectors` gives reference output for signers that are made outside this repo.
+AWS' `eif_build` signs a test EIF with the public test key in [`test/signing/`](./test/signing/README.md):
+
+```bash
+nix build 'github:monzo/aws-nitro-util#signing-test-vectors'
+ls result/{unsigned,signed,signing}
+```
+
+`nix flake check` makes sure that the signed EIF has the PCR0/1/2 of the unsigned EIF, and that its PCR8 is that of the test certificate.
+
+Note that `eif_build` encodes the byte fields of the signature section (`signing_certificate`, `signature`
+and `register_value`) as CBOR arrays of integers, not as CBOR byte strings. Thus the size of the signature
+section changes with the signature value.
+
 ## Design
 
 monzo/aws-nitro-util compiles a CLI from [aws/aws-nitro-enclaves-image-format](https://github.com/aws/aws-nitro-enclaves-image-format/) (which allows building an EIF from a specific file structure) and of Nix utilities to reproducibly build AWS' tooling, the EIF, and its dependencies.
